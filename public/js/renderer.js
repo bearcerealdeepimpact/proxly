@@ -1,19 +1,9 @@
-import Game from './game.js';
-
-var canvas = null;
-var ctx = null;
+import * as THREE from 'three';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
 var COLORS = {
-  FLOOR: '#2a1a0a',
-  WALL: '#555555',
-  STAGE: '#3a2a1a',
-  DANCE_FLOOR: '#332211',
-  TABLE: '#1a0f05',
-  BAR: '#1a0f05',
   LOCAL_PLAYER: '#4488ff',
-  REMOTE_COLORS: ['#ff6644', '#44cc66', '#cc44cc', '#cccc44', '#44cccc', '#ff8844'],
-  NAME_TEXT: '#ffffff',
-  NAME_SHADOW: '#000000'
+  REMOTE_COLORS: ['#ff6644', '#44cc66', '#cc44cc', '#cccc44', '#44cccc', '#ff8844']
 };
 
 var LAYOUT = {
@@ -40,99 +30,18 @@ var LAYOUT = {
   ]
 };
 
-function init(canvasElement) {
-  if (!canvasElement) {
-    return;
-  }
-  canvas = canvasElement;
-  ctx = canvas.getContext('2d');
-}
+var scene = null;
+var camera = null;
+var webglRenderer = null;
+var css2dRenderer = null;
+var players = {};
+var container = null;
 
-function drawClub() {
-  if (!ctx) {
-    return;
-  }
-  var w = canvas.width;
-  var h = canvas.height;
-
-  // Floor
-  ctx.fillStyle = COLORS.FLOOR;
-  ctx.fillRect(0, 0, w, h);
-
-  // Stage
-  ctx.fillStyle = COLORS.STAGE;
-  ctx.fillRect(LAYOUT.STAGE_X, LAYOUT.WALL_THICKNESS, LAYOUT.STAGE_WIDTH, LAYOUT.STAGE_HEIGHT);
-
-  // Dance floor
-  ctx.fillStyle = COLORS.DANCE_FLOOR;
-  ctx.fillRect(LAYOUT.DANCE_FLOOR_X, LAYOUT.DANCE_FLOOR_Y, LAYOUT.DANCE_FLOOR_W, LAYOUT.DANCE_FLOOR_H);
-
-  // Bar counter
-  ctx.fillStyle = COLORS.BAR;
-  ctx.fillRect(LAYOUT.BAR_X, LAYOUT.BAR_Y, LAYOUT.BAR_W, LAYOUT.BAR_H);
-  ctx.strokeStyle = '#3a2a1a';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(LAYOUT.BAR_X, LAYOUT.BAR_Y, LAYOUT.BAR_W, LAYOUT.BAR_H);
-
-  // Tables
-  for (var i = 0; i < LAYOUT.TABLES.length; i++) {
-    var table = LAYOUT.TABLES[i];
-    ctx.fillStyle = COLORS.TABLE;
-    ctx.beginPath();
-    ctx.arc(table.x, table.y, LAYOUT.TABLE_RADIUS, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#3a2a1a';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  }
-
-  // Walls (drawn last to overlay edges)
-  ctx.fillStyle = COLORS.WALL;
-  ctx.fillRect(0, 0, w, LAYOUT.WALL_THICKNESS);                  // top
-  ctx.fillRect(0, h - LAYOUT.WALL_THICKNESS, w, LAYOUT.WALL_THICKNESS); // bottom
-  ctx.fillRect(0, 0, LAYOUT.WALL_THICKNESS, h);                  // left
-  ctx.fillRect(w - LAYOUT.WALL_THICKNESS, 0, LAYOUT.WALL_THICKNESS, h); // right
-}
-
-function drawPlayer(player, isLocal) {
-  if (!ctx || !player) {
-    return;
-  }
-
-  var radius = Game.CONSTANTS.PLAYER_RADIUS;
-  var color;
-
-  if (isLocal) {
-    color = COLORS.LOCAL_PLAYER;
-  } else {
-    var colorIndex = Math.abs(hashCode(player.id || '')) % COLORS.REMOTE_COLORS.length;
-    color = COLORS.REMOTE_COLORS[colorIndex];
-  }
-
-  // Draw player circle
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(player.x, player.y, radius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = '#000000';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  // Draw name above player
-  var name = player.name || '';
-  if (name.length > 0) {
-    ctx.font = '12px Arial, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-
-    // Shadow
-    ctx.fillStyle = COLORS.NAME_SHADOW;
-    ctx.fillText(name, player.x + 1, player.y - radius - 3);
-
-    // Text
-    ctx.fillStyle = COLORS.NAME_TEXT;
-    ctx.fillText(name, player.x, player.y - radius - 4);
-  }
+function toWorld(x2d, y2d) {
+  return {
+    x: (x2d - 400) / 20,
+    z: (y2d - 300) / 20
+  };
 }
 
 function hashCode(str) {
@@ -144,28 +53,270 @@ function hashCode(str) {
   return hash;
 }
 
-function render() {
-  if (!ctx) {
+function createClubGeometry() {
+  // Floor plane (40x30 units)
+  var floorGeo = new THREE.PlaneGeometry(40, 30);
+  var floorMat = new THREE.MeshStandardMaterial({ color: 0x2a1a0a });
+  var floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  // Walls
+  var wallMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
+  var wallHeight = 4;
+  var wallThick = 0.5;
+
+  // Top wall (north)
+  var topWall = new THREE.Mesh(new THREE.BoxGeometry(40, wallHeight, wallThick), wallMat);
+  topWall.position.set(0, wallHeight / 2, -15);
+  topWall.castShadow = true;
+  scene.add(topWall);
+
+  // Bottom wall (south)
+  var bottomWall = new THREE.Mesh(new THREE.BoxGeometry(40, wallHeight, wallThick), wallMat);
+  bottomWall.position.set(0, wallHeight / 2, 15);
+  bottomWall.castShadow = true;
+  scene.add(bottomWall);
+
+  // Left wall (west)
+  var leftWall = new THREE.Mesh(new THREE.BoxGeometry(wallThick, wallHeight, 30), wallMat);
+  leftWall.position.set(-20, wallHeight / 2, 0);
+  leftWall.castShadow = true;
+  scene.add(leftWall);
+
+  // Right wall (east)
+  var rightWall = new THREE.Mesh(new THREE.BoxGeometry(wallThick, wallHeight, 30), wallMat);
+  rightWall.position.set(20, wallHeight / 2, 0);
+  rightWall.castShadow = true;
+  scene.add(rightWall);
+
+  // Stage platform (raised)
+  var stagePos = toWorld(LAYOUT.STAGE_X + LAYOUT.STAGE_WIDTH / 2, LAYOUT.WALL_THICKNESS + LAYOUT.STAGE_HEIGHT / 2);
+  var stageW = LAYOUT.STAGE_WIDTH / 20;
+  var stageD = LAYOUT.STAGE_HEIGHT / 20;
+  var stageH = 1.0;
+  var stageMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1a });
+  var stage = new THREE.Mesh(new THREE.BoxGeometry(stageW, stageH, stageD), stageMat);
+  stage.position.set(stagePos.x, stageH / 2, stagePos.z);
+  stage.receiveShadow = true;
+  stage.castShadow = true;
+  scene.add(stage);
+
+  // Dance floor (recessed, colored)
+  var dfPos = toWorld(LAYOUT.DANCE_FLOOR_X + LAYOUT.DANCE_FLOOR_W / 2, LAYOUT.DANCE_FLOOR_Y + LAYOUT.DANCE_FLOOR_H / 2);
+  var dfW = LAYOUT.DANCE_FLOOR_W / 20;
+  var dfD = LAYOUT.DANCE_FLOOR_H / 20;
+  var danceFloorGeo = new THREE.PlaneGeometry(dfW, dfD);
+  var danceFloorMat = new THREE.MeshStandardMaterial({ color: 0x332211, emissive: 0x110808, emissiveIntensity: 0.3 });
+  var danceFloor = new THREE.Mesh(danceFloorGeo, danceFloorMat);
+  danceFloor.rotation.x = -Math.PI / 2;
+  danceFloor.position.set(dfPos.x, 0.01, dfPos.z);
+  danceFloor.receiveShadow = true;
+  scene.add(danceFloor);
+
+  // Bar counter
+  var barPos = toWorld(LAYOUT.BAR_X + LAYOUT.BAR_W / 2, LAYOUT.BAR_Y + LAYOUT.BAR_H / 2);
+  var barW = LAYOUT.BAR_W / 20;
+  var barD = LAYOUT.BAR_H / 20;
+  var barH = 1.2;
+  var barMat = new THREE.MeshStandardMaterial({ color: 0x1a0f05 });
+  var bar = new THREE.Mesh(new THREE.BoxGeometry(barW, barH, barD), barMat);
+  bar.position.set(barPos.x, barH / 2, barPos.z);
+  bar.castShadow = true;
+  bar.receiveShadow = true;
+  scene.add(bar);
+
+  // Tables (cylinders)
+  var tableMat = new THREE.MeshStandardMaterial({ color: 0x1a0f05 });
+  for (var i = 0; i < LAYOUT.TABLES.length; i++) {
+    var t = LAYOUT.TABLES[i];
+    var tPos = toWorld(t.x, t.y);
+    var tableRadius = LAYOUT.TABLE_RADIUS / 20;
+    var tableH = 0.9;
+    var table = new THREE.Mesh(new THREE.CylinderGeometry(tableRadius, tableRadius, tableH, 16), tableMat);
+    table.position.set(tPos.x, tableH / 2, tPos.z);
+    table.castShadow = true;
+    table.receiveShadow = true;
+    scene.add(table);
+  }
+}
+
+function createLighting() {
+  // Ambient light (dim)
+  var ambient = new THREE.AmbientLight(0x222244, 0.4);
+  scene.add(ambient);
+
+  // Stage spotlights (colored)
+  var spotColors = [0xff4466, 0x4466ff, 0x44ff66];
+  var stageCenter = toWorld(400, 60);
+  for (var i = 0; i < spotColors.length; i++) {
+    var spot = new THREE.SpotLight(spotColors[i], 2, 30, Math.PI / 6, 0.5, 1);
+    spot.position.set(stageCenter.x + (i - 1) * 6, 10, stageCenter.z);
+    spot.target.position.set(stageCenter.x + (i - 1) * 3, 0, stageCenter.z + 2);
+    spot.castShadow = true;
+    scene.add(spot);
+    scene.add(spot.target);
+  }
+
+  // Atmospheric point lights throughout club
+  var pointPositions = [
+    { x: -8, z: 0 },
+    { x: 8, z: 0 },
+    { x: 0, z: -6 },
+    { x: 0, z: 6 }
+  ];
+  for (var j = 0; j < pointPositions.length; j++) {
+    var p = pointPositions[j];
+    var point = new THREE.PointLight(0xff8844, 0.6, 20, 2);
+    point.position.set(p.x, 5, p.z);
+    scene.add(point);
+  }
+}
+
+function init(containerElement) {
+  if (!containerElement) {
+    return;
+  }
+  container = containerElement;
+
+  // Scene
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1a1a2e);
+  scene.fog = new THREE.FogExp2(0x1a1a2e, 0.02);
+
+  // Camera
+  camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 200);
+  camera.position.set(0, 30, 25);
+  camera.lookAt(0, 0, 0);
+
+  // WebGL Renderer
+  webglRenderer = new THREE.WebGLRenderer({ antialias: true });
+  webglRenderer.setSize(container.clientWidth, container.clientHeight);
+  webglRenderer.setPixelRatio(window.devicePixelRatio);
+  webglRenderer.shadowMap.enabled = true;
+  webglRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  container.appendChild(webglRenderer.domElement);
+
+  // CSS2D Renderer
+  css2dRenderer = new CSS2DRenderer();
+  css2dRenderer.setSize(container.clientWidth, container.clientHeight);
+  css2dRenderer.domElement.style.position = 'absolute';
+  css2dRenderer.domElement.style.top = '0';
+  css2dRenderer.domElement.style.left = '0';
+  css2dRenderer.domElement.style.pointerEvents = 'none';
+  container.appendChild(css2dRenderer.domElement);
+
+  createLighting();
+  createClubGeometry();
+}
+
+function addPlayer(id, name, isLocal) {
+  if (players[id]) {
     return;
   }
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  drawClub();
-
-  var players = Game.getAllPlayers();
-  var localPlayer = Game.getLocalPlayer();
-
-  for (var i = 0; i < players.length; i++) {
-    var player = players[i];
-    var isLocal = (player === localPlayer);
-    drawPlayer(player, isLocal);
+  var color;
+  if (isLocal) {
+    color = COLORS.LOCAL_PLAYER;
+  } else {
+    var colorIndex = Math.abs(hashCode(id || '')) % COLORS.REMOTE_COLORS.length;
+    color = COLORS.REMOTE_COLORS[colorIndex];
   }
+
+  // Player mesh (cylinder)
+  var mat = new THREE.MeshStandardMaterial({ color: color });
+  var geo = new THREE.CylinderGeometry(0.4, 0.4, 1.5, 16);
+  var mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(0, 0.75, 0);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+
+  // CSS2D label
+  var labelDiv = document.createElement('div');
+  labelDiv.className = 'player-label';
+  labelDiv.textContent = name || '';
+  labelDiv.style.color = '#ffffff';
+  labelDiv.style.fontSize = '12px';
+  labelDiv.style.fontFamily = 'Arial, sans-serif';
+  labelDiv.style.textShadow = '1px 1px 2px #000000';
+  labelDiv.style.pointerEvents = 'none';
+
+  var label = new CSS2DObject(labelDiv);
+  label.position.set(0, 1.8, 0);
+  mesh.add(label);
+
+  players[id] = {
+    mesh: mesh,
+    label: label,
+    material: mat,
+    geometry: geo
+  };
+}
+
+function removePlayer(id) {
+  var player = players[id];
+  if (!player) {
+    return;
+  }
+
+  player.mesh.remove(player.label);
+  scene.remove(player.mesh);
+  player.geometry.dispose();
+  player.material.dispose();
+
+  if (player.label.element && player.label.element.parentNode) {
+    player.label.element.parentNode.removeChild(player.label.element);
+  }
+
+  delete players[id];
+}
+
+function updatePlayerPosition(id, x, y) {
+  var player = players[id];
+  if (!player) {
+    return;
+  }
+
+  var pos = toWorld(x, y);
+  player.mesh.position.set(pos.x, 0.75, pos.z);
+}
+
+function handleResize() {
+  if (!container || !camera || !webglRenderer || !css2dRenderer) {
+    return;
+  }
+
+  var width = container.clientWidth;
+  var height = container.clientHeight;
+
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+
+  webglRenderer.setSize(width, height);
+  css2dRenderer.setSize(width, height);
+}
+
+function render() {
+  if (!webglRenderer || !scene || !camera) {
+    return;
+  }
+
+  webglRenderer.render(scene, camera);
+  css2dRenderer.render(scene, camera);
+}
+
+function getRenderer() {
+  return webglRenderer;
 }
 
 export default {
   init: init,
   render: render,
-  drawClub: drawClub,
-  drawPlayer: drawPlayer
+  addPlayer: addPlayer,
+  removePlayer: removePlayer,
+  updatePlayerPosition: updatePlayerPosition,
+  getRenderer: getRenderer,
+  handleResize: handleResize
 };
