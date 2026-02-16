@@ -3,7 +3,6 @@ import Input from './input.js';
 import Network from './network.js';
 import Renderer from './renderer.js';
 
-var canvas = null;
 var nameOverlay = null;
 var nameInput = null;
 var nameSubmit = null;
@@ -12,6 +11,7 @@ var lastTimestamp = 0;
 var lastSentX = null;
 var lastSentY = null;
 var tabFocused = true;
+var trackedPlayers = {};
 
 var C = Game.CONSTANTS;
 var MIN_X = C.WALL_THICKNESS + C.PLAYER_RADIUS;
@@ -20,12 +20,11 @@ var MIN_Y = C.WALL_THICKNESS + C.PLAYER_RADIUS;
 var MAX_Y = C.CANVAS_HEIGHT - C.WALL_THICKNESS - C.PLAYER_RADIUS;
 
 function init() {
-  canvas = document.getElementById('gameCanvas');
   nameOverlay = document.getElementById('nameOverlay');
   nameInput = document.getElementById('nameInput');
   nameSubmit = document.getElementById('nameSubmit');
 
-  Renderer.init(canvas);
+  Renderer.init(document.body);
   Input.init();
   Network.connect();
 
@@ -43,6 +42,10 @@ function init() {
   window.addEventListener('blur', function () {
     tabFocused = false;
   });
+
+  window.addEventListener('resize', function () {
+    Renderer.handleResize();
+  });
 }
 
 function handleNameSubmit() {
@@ -57,7 +60,8 @@ function handleNameSubmit() {
   nameOverlay.style.display = 'none';
   running = true;
   lastTimestamp = 0;
-  requestAnimationFrame(gameLoop);
+
+  Renderer.getRenderer().setAnimationLoop(gameLoop);
 }
 
 function gameLoop(timestamp) {
@@ -75,9 +79,8 @@ function gameLoop(timestamp) {
   lastTimestamp = timestamp;
 
   update(deltaTime);
-  render();
-
-  requestAnimationFrame(gameLoop);
+  syncPlayers();
+  Renderer.render();
 }
 
 function update(deltaTime) {
@@ -100,6 +103,8 @@ function update(deltaTime) {
   player.x = newX;
   player.y = newY;
 
+  Renderer.updatePlayerPosition(player.id, newX, newY);
+
   if (newX !== lastSentX || newY !== lastSentY) {
     Network.sendMove(newX, newY);
     lastSentX = newX;
@@ -107,8 +112,37 @@ function update(deltaTime) {
   }
 }
 
-function render() {
-  Renderer.render();
+function syncPlayers() {
+  var localId = Game.localPlayer.id;
+
+  // Ensure local player mesh exists
+  if (localId && !trackedPlayers[localId]) {
+    Renderer.addPlayer(localId, Game.localPlayer.name, true);
+    Renderer.updatePlayerPosition(localId, Game.localPlayer.x, Game.localPlayer.y);
+    trackedPlayers[localId] = true;
+  }
+
+  // Add/update remote players
+  Game.remotePlayers.forEach(function (player, id) {
+    if (!trackedPlayers[id]) {
+      Renderer.addPlayer(id, player.name, false);
+      trackedPlayers[id] = true;
+    }
+    Renderer.updatePlayerPosition(id, player.x, player.y);
+  });
+
+  // Remove players no longer in Game state
+  var keys = Object.keys(trackedPlayers);
+  for (var i = 0; i < keys.length; i++) {
+    var id = keys[i];
+    if (id === localId) {
+      continue;
+    }
+    if (!Game.remotePlayers.has(id)) {
+      Renderer.removePlayer(id);
+      delete trackedPlayers[id];
+    }
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);
