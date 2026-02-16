@@ -1,0 +1,15 @@
+{
+  "name": "music-club",
+  "version": "1.0.0",
+  "description": "A local multiplayer browser game where players walk around a virtual music club together in real-time",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js"
+  },
+  "keywords": ["game", "multiplayer", "websocket", "music-club"],
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.0",
+    "ws": "^8.18.0"
+  }
+}
