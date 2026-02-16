@@ -10,7 +10,7 @@
 
   function getDisconnectOverlay() {
     if (!disconnectOverlay) {
-      disconnectOverlay = document.getElementById('disconnect-overlay');
+      disconnectOverlay = document.getElementById('disconnectedOverlay');
     }
     return disconnectOverlay;
   }
