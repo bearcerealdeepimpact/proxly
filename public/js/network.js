@@ -45,6 +45,7 @@
         reconnectTimer = null;
       }
       if (Game.localPlayer.name) {
+        Game.remotePlayers.clear();
         sendJoin(Game.localPlayer.name);
       }
     };
@@ -91,6 +92,7 @@
             Game.addPlayer(p);
           });
         }
+        send({ type: 'move', x: Game.localPlayer.x, y: Game.localPlayer.y });
         break;
 
       case 'player_joined':
@@ -117,14 +119,35 @@
     send({ type: 'join', name: name });
   }
 
+  var pendingMoveTimer = null;
+
   function sendMove(x, y) {
     var now = Date.now();
     if (now - lastSendTime < THROTTLE_MS) {
+      clearTimeout(pendingMoveTimer);
+      pendingMoveTimer = setTimeout(function () {
+        lastSendTime = Date.now();
+        send({ type: 'move', x: x, y: y });
+      }, THROTTLE_MS);
       return;
     }
+    clearTimeout(pendingMoveTimer);
     lastSendTime = now;
     send({ type: 'move', x: x, y: y });
   }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var reconnectBtn = document.getElementById('reconnectBtn');
+    if (reconnectBtn) {
+      reconnectBtn.addEventListener('click', function () {
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = null;
+        }
+        connect();
+      });
+    }
+  });
 
   window.Network = {
     connect: connect,

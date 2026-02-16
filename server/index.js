@@ -56,6 +56,11 @@ wss.on('connection', (ws) => {
         : '';
       if (!name) return;
 
+      if (playerId && players.has(playerId)) {
+        players.delete(playerId);
+        broadcastToOthers(ws, { type: 'player_left', id: playerId });
+      }
+
       playerId = crypto.randomUUID();
       const player = { id: playerId, name, x: SPAWN_X, y: SPAWN_Y, ws };
       players.set(playerId, player);
