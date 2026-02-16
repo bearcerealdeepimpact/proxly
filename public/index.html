@@ -5,10 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Music Club</title>
   <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.182.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.182.0/examples/jsm/"
+      }
+    }
+  </script>
 </head>
 <body>
-  <canvas id="gameCanvas" width="800" height="600"></canvas>
-
   <div id="nameOverlay" class="overlay">
     <div class="overlay-content">
       <h2>Enter Your Name</h2>
@@ -25,10 +31,6 @@
     </div>
   </div>
 
-  <script src="js/game.js"></script>
-  <script src="js/input.js"></script>
-  <script src="js/network.js"></script>
-  <script src="js/renderer.js"></script>
-  <script src="js/main.js"></script>
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>
