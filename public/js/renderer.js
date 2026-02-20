@@ -38,9 +38,11 @@ var players = {};
 var container = null;
 
 function toWorld(x2d, y2d) {
+  var centerX = container ? container.clientWidth / 2 : 400;
+  var centerY = container ? container.clientHeight / 2 : 300;
   return {
-    x: (x2d - 400) / 20,
-    z: (y2d - 300) / 20
+    x: (x2d - centerX) / 20,
+    z: (y2d - centerY) / 20
   };
 }
 
