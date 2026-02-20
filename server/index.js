@@ -129,6 +129,35 @@ wss.on('connection', (ws) => {
         drinkType,
       });
     }
+
+    if (msg.type === 'drink_drop' && playerId) {
+      const player = players.get(playerId);
+      if (!player) return;
+
+      // Validate player has a drink
+      if (!player.hasDrink) return;
+
+      // Create ground drink
+      const drinkId = crypto.randomUUID();
+      const groundDrink = {
+        id: drinkId,
+        x: player.x,
+        y: player.y,
+        drinkType: player.drinkType,
+      };
+      groundDrinks.set(drinkId, groundDrink);
+
+      // Update player state
+      player.hasDrink = false;
+      player.drinkType = null;
+
+      // Broadcast to all players
+      broadcastToAll({
+        type: 'drink_dropped',
+        playerId: playerId,
+        drink: groundDrink,
+      });
+    }
   });
 
   ws.on('close', () => {
