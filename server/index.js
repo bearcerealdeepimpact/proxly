@@ -15,6 +15,7 @@ const wss = new WebSocketServer({ server });
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 const players = new Map();
+const groundDrinks = new Map();
 
 function broadcastToOthers(senderWs, message) {
   const data = JSON.stringify(message);
@@ -62,7 +63,7 @@ wss.on('connection', (ws) => {
       }
 
       playerId = crypto.randomUUID();
-      const player = { id: playerId, name, x: SPAWN_X, y: SPAWN_Y, ws };
+      const player = { id: playerId, name, x: SPAWN_X, y: SPAWN_Y, hasDrink: false, drinkType: null, ws };
       players.set(playerId, player);
 
       const existingPlayers = [];
