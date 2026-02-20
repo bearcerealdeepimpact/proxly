@@ -12,6 +12,8 @@ var lastSentX = null;
 var lastSentY = null;
 var tabFocused = true;
 var trackedPlayers = {};
+var resizeTimer = null;
+var RESIZE_DEBOUNCE_MS = 150;
 
 var C = Game.CONSTANTS;
 
@@ -40,7 +42,10 @@ function init() {
   });
 
   window.addEventListener('resize', function () {
-    Renderer.handleResize();
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      Renderer.handleResize();
+    }, RESIZE_DEBOUNCE_MS);
   });
 }
 
