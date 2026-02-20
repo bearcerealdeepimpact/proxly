@@ -47,6 +47,16 @@ setInterval(() => {
   }
 }, 1000);
 
+setInterval(() => {
+  broadcastToAll({
+    type: 'music_sync',
+    currentTrackIndex: musicState.currentTrackIndex,
+    trackStartTime: musicState.trackStartTime,
+    serverTime: Date.now(),
+    playlist,
+  });
+}, 5000);
+
 function broadcastToOthers(senderWs, message) {
   const data = JSON.stringify(message);
   wss.clients.forEach((client) => {
