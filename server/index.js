@@ -30,6 +30,23 @@ const musicState = {
   serverStartTime: Date.now(),
 };
 
+setInterval(() => {
+  const currentTrack = playlist[musicState.currentTrackIndex];
+  const elapsed = (Date.now() - musicState.trackStartTime) / 1000;
+
+  if (elapsed >= currentTrack.duration) {
+    musicState.currentTrackIndex = (musicState.currentTrackIndex + 1) % playlist.length;
+    musicState.trackStartTime = Date.now();
+
+    broadcastToAll({
+      type: 'track_changed',
+      currentTrackIndex: musicState.currentTrackIndex,
+      trackStartTime: musicState.trackStartTime,
+      playlist,
+    });
+  }
+}, 1000);
+
 function broadcastToOthers(senderWs, message) {
   const data = JSON.stringify(message);
   wss.clients.forEach((client) => {
