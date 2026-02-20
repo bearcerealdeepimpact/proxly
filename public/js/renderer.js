@@ -297,6 +297,7 @@ function handleResize() {
   camera.updateProjectionMatrix();
 
   webglRenderer.setSize(width, height);
+  webglRenderer.setPixelRatio(window.devicePixelRatio);
   css2dRenderer.setSize(width, height);
 }
 
