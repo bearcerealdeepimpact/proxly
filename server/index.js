@@ -101,6 +101,34 @@ wss.on('connection', (ws) => {
         y,
       });
     }
+
+    if (msg.type === 'drink_order' && playerId) {
+      const player = players.get(playerId);
+      if (!player) return;
+
+      // Validate player is at bar (x < 300, y > 440)
+      if (player.x >= 300 || player.y <= 440) return;
+
+      // Validate player doesn't already have a drink
+      if (player.hasDrink) return;
+
+      // Validate drink type
+      const drinkType = typeof msg.drinkType === 'string'
+        ? msg.drinkType.trim()
+        : '';
+      if (!drinkType || !['beer', 'wine', 'cocktail'].includes(drinkType)) return;
+
+      // Update player state
+      player.hasDrink = true;
+      player.drinkType = drinkType;
+
+      // Broadcast to all players
+      broadcastToAll({
+        type: 'drink_ordered',
+        id: playerId,
+        drinkType,
+      });
+    }
   });
 
   ws.on('close', () => {
