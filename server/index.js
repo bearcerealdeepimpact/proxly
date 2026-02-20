@@ -16,6 +16,20 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 
 const players = new Map();
 
+const playlist = [
+  { name: 'Chill Vibes', url: '/music/track1.mp3', duration: 180 },
+  { name: 'Sunset Dreams', url: '/music/track2.mp3', duration: 210 },
+  { name: 'Night Cruise', url: '/music/track3.mp3', duration: 195 },
+  { name: 'Cyber Flow', url: '/music/track4.mp3', duration: 220 },
+  { name: 'Neon Pulse', url: '/music/track5.mp3', duration: 200 },
+];
+
+const musicState = {
+  currentTrackIndex: 0,
+  trackStartTime: Date.now(),
+  serverStartTime: Date.now(),
+};
+
 function broadcastToOthers(senderWs, message) {
   const data = JSON.stringify(message);
   wss.clients.forEach((client) => {
@@ -76,6 +90,14 @@ wss.on('connection', (ws) => {
         type: 'welcome',
         id: playerId,
         players: existingPlayers,
+      }));
+
+      ws.send(JSON.stringify({
+        type: 'music_state',
+        currentTrackIndex: musicState.currentTrackIndex,
+        trackStartTime: musicState.trackStartTime,
+        serverStartTime: musicState.serverStartTime,
+        playlist,
       }));
 
       broadcastToOthers(ws, {
