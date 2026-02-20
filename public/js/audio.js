@@ -1,5 +1,8 @@
 var audio = null;
 var currentTrack = null;
+var serverTimeOffset = 0;
+var trackStartTime = 0;
+var trackDuration = 0;
 
 function init() {
   if (audio) {
@@ -45,9 +48,80 @@ function getAudioElement() {
   return audio;
 }
 
+function calculatePlaybackPosition() {
+  if (!trackStartTime) {
+    return 0;
+  }
+  var serverNow = Date.now() + serverTimeOffset;
+  var elapsed = (serverNow - trackStartTime) / 1000;
+  return elapsed;
+}
+
+function syncToServer(serverTime, newTrackStartTime, newTrackDuration) {
+  if (!audio) {
+    init();
+  }
+
+  serverTimeOffset = serverTime - Date.now();
+  trackStartTime = newTrackStartTime;
+  trackDuration = newTrackDuration || 0;
+
+  if (!audio || !currentTrack) {
+    return;
+  }
+
+  var targetPosition = calculatePlaybackPosition();
+  if (targetPosition < 0 || targetPosition > trackDuration) {
+    return;
+  }
+
+  var currentPosition = audio.currentTime;
+  var drift = Math.abs(targetPosition - currentPosition);
+
+  if (drift > 0.5) {
+    audio.currentTime = targetPosition;
+  }
+}
+
+function handleMusicState(message) {
+  if (!message || !message.playlist || message.currentTrackIndex === undefined) {
+    return;
+  }
+
+  var track = message.playlist[message.currentTrackIndex];
+  if (!track) {
+    return;
+  }
+
+  var trackInfo = {
+    url: '/audio/' + track.filename,
+    title: track.title,
+    artist: track.artist,
+    duration: track.duration
+  };
+
+  playTrack(trackInfo);
+  syncToServer(message.serverTime, message.trackStartTime, track.duration);
+}
+
+function handleMusicSync(message) {
+  if (!message || message.currentTrackIndex === undefined) {
+    return;
+  }
+
+  var track = message.playlist ? message.playlist[message.currentTrackIndex] : null;
+  if (track) {
+    syncToServer(message.serverTime, message.trackStartTime, track.duration);
+  }
+}
+
 export default {
   init: init,
   playTrack: playTrack,
   getCurrentTrack: getCurrentTrack,
-  getAudioElement: getAudioElement
+  getAudioElement: getAudioElement,
+  calculatePlaybackPosition: calculatePlaybackPosition,
+  syncToServer: syncToServer,
+  handleMusicState: handleMusicState,
+  handleMusicSync: handleMusicSync
 };
