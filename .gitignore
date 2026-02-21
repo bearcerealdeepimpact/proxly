@@ -8,3 +8,6 @@
 .security-key
 logs/security/
 node_modules/
+
+# SSL certificates (keep directory but ignore certificate files)
+ssl/*.pem
