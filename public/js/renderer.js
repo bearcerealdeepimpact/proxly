@@ -283,6 +283,13 @@ function removePlayer(id) {
     return;
   }
 
+  // Remove drink if present
+  if (player.drink) {
+    player.mesh.remove(player.drink);
+    player.drink.geometry.dispose();
+    player.drink.material.dispose();
+  }
+
   player.mesh.remove(player.label);
   scene.remove(player.mesh);
   player.geometry.dispose();
@@ -303,6 +310,30 @@ function updatePlayerPosition(id, x, y) {
 
   var pos = toWorld(x, y);
   player.mesh.position.set(pos.x, 0.75, pos.z);
+}
+
+function updatePlayerDrink(id, hasDrink) {
+  var player = players[id];
+  if (!player) {
+    return;
+  }
+
+  // Remove existing drink if present
+  if (player.drink) {
+    player.mesh.remove(player.drink);
+    player.drink.geometry.dispose();
+    player.drink.material.dispose();
+    player.drink = null;
+  }
+
+  // Add new drink if needed
+  if (hasDrink) {
+    var drink = createDrinkMesh();
+    // Position drink in player's hand (offset to the side and up)
+    drink.position.set(0.5, 0.6, 0);
+    player.mesh.add(drink);
+    player.drink = drink;
+  }
 }
 
 function handleResize() {
@@ -339,6 +370,7 @@ export default {
   addPlayer: addPlayer,
   removePlayer: removePlayer,
   updatePlayerPosition: updatePlayerPosition,
+  updatePlayerDrink: updatePlayerDrink,
   getRenderer: getRenderer,
   handleResize: handleResize
 };
