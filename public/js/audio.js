@@ -16,6 +16,7 @@
   var nextTrackPreloaded = false;
   var isMuted = false;
   var volumeBeforeMute = 50;
+  var tabFocused = true;
 
   function init() {
     if (audio) {
@@ -78,6 +79,15 @@
     }
 
     checkAutoplayUnlock();
+
+    window.addEventListener('focus', function () {
+      tabFocused = true;
+      handleTabFocus();
+    });
+
+    window.addEventListener('blur', function () {
+      tabFocused = false;
+    });
   }
 
   function checkAutoplayUnlock() {
@@ -381,6 +391,28 @@
 
     nextTrackPreloaded = false;
     nextTrack = null;
+  }
+
+  function handleTabFocus() {
+    if (!currentAudio || !currentTrack) {
+      return;
+    }
+
+    if (currentAudio.paused && autoplayUnlocked) {
+      var playPromise = currentAudio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(function (error) {
+        });
+      }
+    }
+
+    if (ambientAudio && ambientAudio.paused && autoplayUnlocked) {
+      var ambientPlayPromise = ambientAudio.play();
+      if (ambientPlayPromise !== undefined) {
+        ambientPlayPromise.catch(function (error) {
+        });
+      }
+    }
   }
 
   window.Audio = {
