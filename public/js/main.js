@@ -2,6 +2,7 @@ import Game from './game.js';
 import Input from './input.js';
 import Network from './network.js';
 import Renderer from './renderer.js';
+import { SPRITE_CONFIG } from './sprites.js';
 
 var nameOverlay = null;
 var nameInput = null;
@@ -79,6 +80,7 @@ function gameLoop(timestamp) {
   lastTimestamp = timestamp;
 
   update(deltaTime);
+  updateAnimation(deltaTime);
   syncPlayers();
   Renderer.render();
 }
@@ -121,6 +123,40 @@ function update(deltaTime) {
     Network.sendMove(newX, newY);
     lastSentX = newX;
     lastSentY = newY;
+  }
+}
+
+function updateAnimation(deltaTime) {
+  var player = Game.localPlayer;
+
+  if (player.isMoving) {
+    // Accumulate animation time
+    player.animationTime += deltaTime;
+
+    // Calculate frame duration (1 / animationSpeed)
+    var frameDuration = 1 / SPRITE_CONFIG.animationSpeed;
+
+    // Advance frame when enough time has passed
+    if (player.animationTime >= frameDuration) {
+      player.animationTime -= frameDuration;
+
+      // Cycle through walk frames [1, 2, 3]
+      var walkFrames = SPRITE_CONFIG.animations.walk;
+      var currentFrameIndex = walkFrames.indexOf(player.animationFrame);
+
+      if (currentFrameIndex === -1) {
+        // Not in walk cycle, start at first walk frame
+        player.animationFrame = walkFrames[0];
+      } else {
+        // Move to next walk frame, cycling back to start
+        var nextIndex = (currentFrameIndex + 1) % walkFrames.length;
+        player.animationFrame = walkFrames[nextIndex];
+      }
+    }
+  } else {
+    // Not moving - show idle frame and reset animation time
+    player.animationFrame = SPRITE_CONFIG.animations.idle;
+    player.animationTime = 0;
   }
 }
 
