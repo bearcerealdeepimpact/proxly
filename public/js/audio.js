@@ -115,6 +115,38 @@ function handleMusicSync(message) {
   }
 }
 
+function updateNowPlayingUI() {
+  var nowPlayingEl = document.getElementById('nowPlaying');
+  var trackTitleEl = document.querySelector('.track-title');
+  var trackArtistEl = document.querySelector('.track-artist');
+  var progressBarEl = document.querySelector('.progress-bar');
+
+  if (!currentTrack) {
+    if (nowPlayingEl) {
+      nowPlayingEl.style.display = 'none';
+    }
+    return;
+  }
+
+  if (nowPlayingEl) {
+    nowPlayingEl.style.display = 'block';
+  }
+
+  if (trackTitleEl) {
+    trackTitleEl.textContent = currentTrack.title || 'Unknown Track';
+  }
+
+  if (trackArtistEl) {
+    trackArtistEl.textContent = currentTrack.artist || '';
+  }
+
+  if (progressBarEl && trackDuration > 0) {
+    var position = calculatePlaybackPosition();
+    var percentage = Math.min(100, Math.max(0, (position / trackDuration) * 100));
+    progressBarEl.style.width = percentage + '%';
+  }
+}
+
 export default {
   init: init,
   playTrack: playTrack,
@@ -123,5 +155,6 @@ export default {
   calculatePlaybackPosition: calculatePlaybackPosition,
   syncToServer: syncToServer,
   handleMusicState: handleMusicState,
-  handleMusicSync: handleMusicSync
+  handleMusicSync: handleMusicSync,
+  updateNowPlayingUI: updateNowPlayingUI
 };
