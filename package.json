@@ -4,12 +4,23 @@
   "description": "A local multiplayer browser game where players walk around a virtual music club together in real-time",
   "main": "server/index.js",
   "scripts": {
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "test": "jest",
+    "test:e2e": "jest tests/e2e"
   },
-  "keywords": ["game", "multiplayer", "websocket", "music-club"],
+  "keywords": [
+    "game",
+    "multiplayer",
+    "websocket",
+    "music-club"
+  ],
   "license": "ISC",
   "dependencies": {
     "express": "^4.21.0",
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "jest": "^30.2.0",
+    "puppeteer": "^24.37.5"
   }
 }
