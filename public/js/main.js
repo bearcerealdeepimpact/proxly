@@ -82,6 +82,7 @@ function gameLoop(timestamp) {
 
   update(deltaTime);
   syncPlayers();
+  Audio.updateNowPlayingUI();
   Renderer.render();
 }
 
