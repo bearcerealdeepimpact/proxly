@@ -122,6 +122,11 @@ function syncPlayers() {
     trackedPlayers[localId] = true;
   }
 
+  // Update local player drink state
+  if (localId) {
+    Renderer.updatePlayerDrink(localId, Game.localPlayer.drinkId);
+  }
+
   // Add/update remote players
   Game.remotePlayers.forEach(function (player, id) {
     if (!trackedPlayers[id]) {
@@ -129,6 +134,7 @@ function syncPlayers() {
       trackedPlayers[id] = true;
     }
     Renderer.updatePlayerPosition(id, player.x, player.y);
+    Renderer.updatePlayerDrink(id, player.drinkId);
   });
 
   // Remove players no longer in Game state
@@ -143,6 +149,9 @@ function syncPlayers() {
       delete trackedPlayers[id];
     }
   }
+
+  // Sync ground drinks
+  Renderer.syncGroundDrinks(Game.groundDrinks);
 }
 
 document.addEventListener('DOMContentLoaded', init);
