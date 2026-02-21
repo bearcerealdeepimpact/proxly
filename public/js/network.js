@@ -91,6 +91,11 @@ function handleMessage(msg) {
           Game.addPlayer(p);
         });
       }
+      if (Array.isArray(msg.groundDrinks)) {
+        msg.groundDrinks.forEach(function (drink) {
+          Game.addGroundDrink(drink);
+        });
+      }
       send({ type: 'move', x: Game.localPlayer.x, y: Game.localPlayer.y });
       break;
 
