@@ -158,6 +158,43 @@ wss.on('connection', (ws) => {
         drink: groundDrink,
       });
     }
+
+    if (msg.type === 'drink_kick' && playerId) {
+      const player = players.get(playerId);
+      if (!player) return;
+
+      // Validate drinkId
+      const drinkId = typeof msg.drinkId === 'string' ? msg.drinkId.trim() : '';
+      if (!drinkId) return;
+
+      const drink = groundDrinks.get(drinkId);
+      if (!drink) return;
+
+      // Validate proximity (within 50 pixels)
+      const dx = player.x - drink.x;
+      const dy = player.y - drink.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance > 50) return;
+
+      // Calculate kick direction (away from player)
+      const angle = Math.atan2(drink.y - player.y, drink.x - player.x);
+      const kickForce = 100; // pixels to move
+      const newX = drink.x + Math.cos(angle) * kickForce;
+      const newY = drink.y + Math.sin(angle) * kickForce;
+
+      // Update drink position
+      drink.x = newX;
+      drink.y = newY;
+
+      // Broadcast to all players
+      broadcastToAll({
+        type: 'drink_kicked',
+        drinkId: drinkId,
+        x: newX,
+        y: newY,
+        kickedBy: playerId,
+      });
+    }
   });
 
   ws.on('close', () => {
