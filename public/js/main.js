@@ -131,6 +131,27 @@ function update(deltaTime) {
       Network.sendDrinkDrop();
     }
   }
+
+  if (Input.isDrinkKickPressed()) {
+    var nearestDrink = null;
+    var nearestDistance = Infinity;
+    var KICK_RANGE = C.PLAYER_RADIUS * 3;
+
+    Game.groundDrinks.forEach(function (drink) {
+      var dx = drink.x - player.x;
+      var dy = drink.y - player.y;
+      var distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance <= KICK_RANGE && distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestDrink = drink;
+      }
+    });
+
+    if (nearestDrink) {
+      Network.sendDrinkKick(nearestDrink.id);
+    }
+  }
 }
 
 function syncPlayers() {
