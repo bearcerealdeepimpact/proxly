@@ -16,6 +16,48 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 
 const players = new Map();
 
+const playlist = [
+  { title: 'Electric Dreams', artist: 'Neon Skyline', filename: 'electric-dreams.mp3', duration: 203 },
+  { title: 'Midnight Groove', artist: 'The Funkateers', filename: 'midnight-groove.mp3', duration: 185 },
+  { title: 'Cosmic Voyage', artist: 'Stellar Collective', filename: 'cosmic-voyage.mp3', duration: 247 },
+  { title: 'Urban Pulse', artist: 'City Rhythms', filename: 'urban-pulse.mp3', duration: 192 },
+  { title: 'Sunset Boulevard', artist: 'LA Soundwaves', filename: 'sunset-boulevard.mp3', duration: 218 },
+  { title: 'Digital Horizons', artist: 'Synthwave Alliance', filename: 'digital-horizons.mp3', duration: 234 },
+];
+
+const musicState = {
+  currentTrackIndex: 0,
+  trackStartTime: Date.now(),
+  serverStartTime: Date.now(),
+};
+
+setInterval(() => {
+  const currentTrack = playlist[musicState.currentTrackIndex];
+  const elapsed = (Date.now() - musicState.trackStartTime) / 1000;
+
+  if (elapsed >= currentTrack.duration) {
+    musicState.currentTrackIndex = (musicState.currentTrackIndex + 1) % playlist.length;
+    musicState.trackStartTime = Date.now();
+
+    broadcastToAll({
+      type: 'track_changed',
+      currentTrackIndex: musicState.currentTrackIndex,
+      trackStartTime: musicState.trackStartTime,
+      playlist,
+    });
+  }
+}, 1000);
+
+setInterval(() => {
+  broadcastToAll({
+    type: 'music_sync',
+    currentTrackIndex: musicState.currentTrackIndex,
+    trackStartTime: musicState.trackStartTime,
+    serverTime: Date.now(),
+    playlist,
+  });
+}, 5000);
+
 function broadcastToOthers(senderWs, message) {
   const data = JSON.stringify(message);
   wss.clients.forEach((client) => {
@@ -76,6 +118,15 @@ wss.on('connection', (ws) => {
         type: 'welcome',
         id: playerId,
         players: existingPlayers,
+      }));
+
+      ws.send(JSON.stringify({
+        type: 'music_state',
+        currentTrackIndex: musicState.currentTrackIndex,
+        trackStartTime: musicState.trackStartTime,
+        serverStartTime: musicState.serverStartTime,
+        serverTime: Date.now(),
+        playlist,
       }));
 
       broadcastToOthers(ws, {

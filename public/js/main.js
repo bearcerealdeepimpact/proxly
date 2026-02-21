@@ -2,6 +2,7 @@ import Game from './game.js';
 import Input from './input.js';
 import Network from './network.js';
 import Renderer from './renderer.js';
+import Audio from './audio.js';
 
 var nameOverlay = null;
 var nameInput = null;
@@ -24,6 +25,7 @@ function init() {
 
   Renderer.init(document.body);
   Input.init();
+  Audio.init();
   Network.connect();
 
   nameSubmit.addEventListener('click', handleNameSubmit);
@@ -81,6 +83,7 @@ function gameLoop(timestamp) {
 
   update(deltaTime);
   syncPlayers();
+  Audio.updateNowPlayingUI();
   Renderer.render();
 }
 
