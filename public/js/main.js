@@ -121,6 +121,9 @@ function update(deltaTime) {
       return;
     }
     if (player.x < 300 && player.y > 440) {
+      // Optimistic update: update local state immediately for instant feedback
+      player.hasDrink = true;
+      player.drinkType = 'beer';
       Network.sendDrinkOrder('beer');
       lastDrinkOrderTime = now;
     }
@@ -128,6 +131,11 @@ function update(deltaTime) {
 
   if (Input.isDrinkDropPressed()) {
     if (player.hasDrink) {
+      // Optimistic update: remove drink from hand immediately for instant feedback
+      // Ground drink will be created when server responds to avoid ID conflicts
+      player.hasDrink = false;
+      player.drinkType = null;
+
       Network.sendDrinkDrop();
     }
   }
@@ -149,6 +157,14 @@ function update(deltaTime) {
     });
 
     if (nearestDrink) {
+      // Optimistic update: calculate and apply kick physics immediately (matches server)
+      var angle = Math.atan2(nearestDrink.y - player.y, nearestDrink.x - player.x);
+      var kickForce = 100;
+      var kickX = nearestDrink.x + Math.cos(angle) * kickForce;
+      var kickY = nearestDrink.y + Math.sin(angle) * kickForce;
+
+      Game.updateGroundDrink(nearestDrink.id, kickX, kickY);
+
       Network.sendDrinkKick(nearestDrink.id);
     }
   }
