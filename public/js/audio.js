@@ -1,160 +1,164 @@
-var audio = null;
-var currentTrack = null;
-var serverTimeOffset = 0;
-var trackStartTime = 0;
-var trackDuration = 0;
+(function () {
+  'use strict';
 
-function init() {
-  if (audio) {
-    return;
-  }
-  audio = new Audio();
-  audio.preload = 'auto';
+  var audio = null;
+  var currentTrack = null;
+  var serverTimeOffset = 0;
+  var trackStartTime = 0;
+  var trackDuration = 0;
 
-  audio.onerror = function () {
-    currentTrack = null;
-  };
+  function init() {
+    if (audio) {
+      return;
+    }
+    audio = new Audio();
+    audio.preload = 'auto';
 
-  audio.onended = function () {
-    currentTrack = null;
-  };
-}
-
-function playTrack(trackInfo) {
-  if (!audio) {
-    init();
-  }
-
-  if (!trackInfo || !trackInfo.url) {
-    return;
-  }
-
-  currentTrack = trackInfo;
-  audio.src = trackInfo.url;
-
-  var playPromise = audio.play();
-  if (playPromise !== undefined) {
-    playPromise.catch(function (error) {
+    audio.onerror = function () {
       currentTrack = null;
-    });
-  }
-}
+    };
 
-function getCurrentTrack() {
-  return currentTrack;
-}
-
-function getAudioElement() {
-  return audio;
-}
-
-function calculatePlaybackPosition() {
-  if (!trackStartTime) {
-    return 0;
-  }
-  var serverNow = Date.now() + serverTimeOffset;
-  var elapsed = (serverNow - trackStartTime) / 1000;
-  return elapsed;
-}
-
-function syncToServer(serverTime, newTrackStartTime, newTrackDuration) {
-  if (!audio) {
-    init();
+    audio.onended = function () {
+      currentTrack = null;
+    };
   }
 
-  serverTimeOffset = serverTime - Date.now();
-  trackStartTime = newTrackStartTime;
-  trackDuration = newTrackDuration || 0;
+  function playTrack(trackInfo) {
+    if (!audio) {
+      init();
+    }
 
-  if (!audio || !currentTrack) {
-    return;
+    if (!trackInfo || !trackInfo.url) {
+      return;
+    }
+
+    currentTrack = trackInfo;
+    audio.src = trackInfo.url;
+
+    var playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(function (error) {
+        currentTrack = null;
+      });
+    }
   }
 
-  var targetPosition = calculatePlaybackPosition();
-  if (targetPosition < 0 || targetPosition > trackDuration) {
-    return;
+  function getCurrentTrack() {
+    return currentTrack;
   }
 
-  var currentPosition = audio.currentTime;
-  var drift = Math.abs(targetPosition - currentPosition);
-
-  if (drift > 0.5) {
-    audio.currentTime = targetPosition;
-  }
-}
-
-function handleMusicState(message) {
-  if (!message || !message.playlist || message.currentTrackIndex === undefined) {
-    return;
+  function getAudioElement() {
+    return audio;
   }
 
-  var track = message.playlist[message.currentTrackIndex];
-  if (!track) {
-    return;
+  function calculatePlaybackPosition() {
+    if (!trackStartTime) {
+      return 0;
+    }
+    var serverNow = Date.now() + serverTimeOffset;
+    var elapsed = (serverNow - trackStartTime) / 1000;
+    return elapsed;
   }
 
-  var trackInfo = {
-    url: '/audio/' + track.filename,
-    title: track.title,
-    artist: track.artist,
-    duration: track.duration
-  };
+  function syncToServer(serverTime, newTrackStartTime, newTrackDuration) {
+    if (!audio) {
+      init();
+    }
 
-  playTrack(trackInfo);
-  syncToServer(message.serverTime, message.trackStartTime, track.duration);
-}
+    serverTimeOffset = serverTime - Date.now();
+    trackStartTime = newTrackStartTime;
+    trackDuration = newTrackDuration || 0;
 
-function handleMusicSync(message) {
-  if (!message || message.currentTrackIndex === undefined) {
-    return;
+    if (!audio || !currentTrack) {
+      return;
+    }
+
+    var targetPosition = calculatePlaybackPosition();
+    if (targetPosition < 0 || targetPosition > trackDuration) {
+      return;
+    }
+
+    var currentPosition = audio.currentTime;
+    var drift = Math.abs(targetPosition - currentPosition);
+
+    if (drift > 0.5) {
+      audio.currentTime = targetPosition;
+    }
   }
 
-  var track = message.playlist ? message.playlist[message.currentTrackIndex] : null;
-  if (track) {
+  function handleMusicState(message) {
+    if (!message || !message.playlist || message.currentTrackIndex === undefined) {
+      return;
+    }
+
+    var track = message.playlist[message.currentTrackIndex];
+    if (!track) {
+      return;
+    }
+
+    var trackInfo = {
+      url: '/audio/' + track.filename,
+      title: track.title,
+      artist: track.artist,
+      duration: track.duration
+    };
+
+    playTrack(trackInfo);
     syncToServer(message.serverTime, message.trackStartTime, track.duration);
   }
-}
 
-function updateNowPlayingUI() {
-  var nowPlayingEl = document.getElementById('nowPlaying');
-  var trackTitleEl = document.querySelector('.track-title');
-  var trackArtistEl = document.querySelector('.track-artist');
-  var progressBarEl = document.querySelector('.progress-bar');
-
-  if (!currentTrack) {
-    if (nowPlayingEl) {
-      nowPlayingEl.style.display = 'none';
+  function handleMusicSync(message) {
+    if (!message || message.currentTrackIndex === undefined) {
+      return;
     }
-    return;
+
+    var track = message.playlist ? message.playlist[message.currentTrackIndex] : null;
+    if (track) {
+      syncToServer(message.serverTime, message.trackStartTime, track.duration);
+    }
   }
 
-  if (nowPlayingEl) {
-    nowPlayingEl.style.display = 'block';
+  function updateNowPlayingUI() {
+    var nowPlayingEl = document.getElementById('nowPlaying');
+    var trackTitleEl = document.querySelector('.track-title');
+    var trackArtistEl = document.querySelector('.track-artist');
+    var progressBarEl = document.querySelector('.progress-bar');
+
+    if (!currentTrack) {
+      if (nowPlayingEl) {
+        nowPlayingEl.style.display = 'none';
+      }
+      return;
+    }
+
+    if (nowPlayingEl) {
+      nowPlayingEl.style.display = 'block';
+    }
+
+    if (trackTitleEl) {
+      trackTitleEl.textContent = currentTrack.title || 'Unknown Track';
+    }
+
+    if (trackArtistEl) {
+      trackArtistEl.textContent = currentTrack.artist || '';
+    }
+
+    if (progressBarEl && trackDuration > 0) {
+      var position = calculatePlaybackPosition();
+      var percentage = Math.min(100, Math.max(0, (position / trackDuration) * 100));
+      progressBarEl.style.width = percentage + '%';
+    }
   }
 
-  if (trackTitleEl) {
-    trackTitleEl.textContent = currentTrack.title || 'Unknown Track';
-  }
-
-  if (trackArtistEl) {
-    trackArtistEl.textContent = currentTrack.artist || '';
-  }
-
-  if (progressBarEl && trackDuration > 0) {
-    var position = calculatePlaybackPosition();
-    var percentage = Math.min(100, Math.max(0, (position / trackDuration) * 100));
-    progressBarEl.style.width = percentage + '%';
-  }
-}
-
-export default {
-  init: init,
-  playTrack: playTrack,
-  getCurrentTrack: getCurrentTrack,
-  getAudioElement: getAudioElement,
-  calculatePlaybackPosition: calculatePlaybackPosition,
-  syncToServer: syncToServer,
-  handleMusicState: handleMusicState,
-  handleMusicSync: handleMusicSync,
-  updateNowPlayingUI: updateNowPlayingUI
-};
+  window.Audio = {
+    init: init,
+    playTrack: playTrack,
+    getCurrentTrack: getCurrentTrack,
+    getAudioElement: getAudioElement,
+    calculatePlaybackPosition: calculatePlaybackPosition,
+    syncToServer: syncToServer,
+    handleMusicState: handleMusicState,
+    handleMusicSync: handleMusicSync,
+    updateNowPlayingUI: updateNowPlayingUI
+  };
+})();
