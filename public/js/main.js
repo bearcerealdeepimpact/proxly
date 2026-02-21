@@ -124,7 +124,7 @@ function syncPlayers() {
 
   // Update local player drink state
   if (localId) {
-    Renderer.updatePlayerDrink(localId, Game.localPlayer.drinkId);
+    Renderer.updatePlayerDrink(localId, Game.localPlayer.hasDrink);
   }
 
   // Add/update remote players
@@ -134,7 +134,7 @@ function syncPlayers() {
       trackedPlayers[id] = true;
     }
     Renderer.updatePlayerPosition(id, player.x, player.y);
-    Renderer.updatePlayerDrink(id, player.drinkId);
+    Renderer.updatePlayerDrink(id, player.hasDrink);
   });
 
   // Remove players no longer in Game state

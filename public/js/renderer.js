@@ -377,6 +377,30 @@ function updateGroundDrinkPosition(drinkId, x, y) {
   groundDrink.mesh.position.set(pos.x, 0.2, pos.z);
 }
 
+function syncGroundDrinks(gameDrinks) {
+  if (!gameDrinks) {
+    return;
+  }
+
+  // Add/update drinks from game state
+  gameDrinks.forEach(function (drink, drinkId) {
+    if (!groundDrinks[drinkId]) {
+      addGroundDrink(drinkId, drink.x, drink.y);
+    } else {
+      updateGroundDrinkPosition(drinkId, drink.x, drink.y);
+    }
+  });
+
+  // Remove drinks no longer in game state
+  var renderedIds = Object.keys(groundDrinks);
+  for (var i = 0; i < renderedIds.length; i++) {
+    var id = renderedIds[i];
+    if (!gameDrinks.has(id)) {
+      removeGroundDrink(id);
+    }
+  }
+}
+
 function handleResize() {
   if (!container || !camera || !webglRenderer || !css2dRenderer) {
     return;
@@ -415,6 +439,7 @@ export default {
   addGroundDrink: addGroundDrink,
   removeGroundDrink: removeGroundDrink,
   updateGroundDrinkPosition: updateGroundDrinkPosition,
+  syncGroundDrinks: syncGroundDrinks,
   getRenderer: getRenderer,
   handleResize: handleResize
 };
