@@ -181,6 +181,13 @@ function init(containerElement) {
   }
   container = containerElement;
 
+  // Load sprite textures
+  SpriteManager.loadSprites().then(function() {
+    console.log('Sprite textures loaded successfully');
+  }).catch(function(error) {
+    console.error('Failed to load sprite textures:', error);
+  });
+
   // Scene
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x1a1a2e);
