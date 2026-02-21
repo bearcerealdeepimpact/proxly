@@ -55,8 +55,37 @@ function updatePlayerPosition(id, x, y) {
   }
   var player = remotePlayers.get(id);
   if (player) {
+    // Calculate movement delta
+    var dx = x - player.x;
+    var dy = y - player.y;
+    var threshold = 0.1;
+
+    // Update position
     player.x = x;
     player.y = y;
+
+    // Calculate direction and movement state
+    var isMoving = Math.abs(dx) > threshold || Math.abs(dy) > threshold;
+    player.isMoving = isMoving;
+
+    if (isMoving) {
+      // Calculate direction based on dominant axis
+      if (Math.abs(dy) > Math.abs(dx)) {
+        player.direction = dy > 0 ? 'down' : 'up';
+      } else {
+        player.direction = dx > 0 ? 'right' : 'left';
+      }
+
+      // Simple animation cycling (no deltaTime, just cycle on each update)
+      if (player.animationFrame === 0 || player.animationFrame > 3) {
+        player.animationFrame = 1;
+      } else {
+        player.animationFrame = (player.animationFrame % 3) + 1;
+      }
+    } else {
+      // Idle frame
+      player.animationFrame = 0;
+    }
   }
 }
 

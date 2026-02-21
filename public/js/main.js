@@ -117,7 +117,7 @@ function update(deltaTime) {
   player.x = newX;
   player.y = newY;
 
-  Renderer.updatePlayerPosition(player.id, newX, newY);
+  Renderer.updatePlayerPosition(player.id, newX, newY, player.direction, player.animationFrame);
 
   if (newX !== lastSentX || newY !== lastSentY) {
     Network.sendMove(newX, newY);
@@ -158,6 +158,11 @@ function updateAnimation(deltaTime) {
     player.animationFrame = SPRITE_CONFIG.animations.idle;
     player.animationTime = 0;
   }
+
+  // Update renderer with current direction and animation frame
+  if (player.id) {
+    Renderer.updatePlayerPosition(player.id, player.x, player.y, player.direction, player.animationFrame);
+  }
 }
 
 function syncPlayers() {
@@ -165,18 +170,18 @@ function syncPlayers() {
 
   // Ensure local player mesh exists
   if (localId && !trackedPlayers[localId]) {
-    Renderer.addPlayer(localId, Game.localPlayer.name, true);
-    Renderer.updatePlayerPosition(localId, Game.localPlayer.x, Game.localPlayer.y);
+    Renderer.addPlayer(localId, Game.localPlayer.name, true, Game.localPlayer.characterId);
+    Renderer.updatePlayerPosition(localId, Game.localPlayer.x, Game.localPlayer.y, Game.localPlayer.direction, Game.localPlayer.animationFrame);
     trackedPlayers[localId] = true;
   }
 
   // Add/update remote players
   Game.remotePlayers.forEach(function (player, id) {
     if (!trackedPlayers[id]) {
-      Renderer.addPlayer(id, player.name, false);
+      Renderer.addPlayer(id, player.name, false, player.characterId);
       trackedPlayers[id] = true;
     }
-    Renderer.updatePlayerPosition(id, player.x, player.y);
+    Renderer.updatePlayerPosition(id, player.x, player.y, player.direction, player.animationFrame);
   });
 
   // Remove players no longer in Game state
