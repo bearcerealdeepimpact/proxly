@@ -1,4 +1,5 @@
 import Game from './game.js';
+import Audio from './audio.js';
 
 var ws = null;
 var reconnectTimer = null;
@@ -104,6 +105,18 @@ function handleMessage(msg) {
 
     case 'player_left':
       Game.removePlayer(msg.id);
+      break;
+
+    case 'music_state':
+      Audio.handleMusicState(msg);
+      break;
+
+    case 'track_changed':
+      Audio.handleMusicState(msg);
+      break;
+
+    case 'music_sync':
+      Audio.handleMusicSync(msg);
       break;
   }
 }

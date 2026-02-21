@@ -1,11 +1,19 @@
 var CONSTANTS = {
-  CANVAS_WIDTH: 800,
-  CANVAS_HEIGHT: 600,
+  get CANVAS_WIDTH() {
+    return window.innerWidth;
+  },
+  get CANVAS_HEIGHT() {
+    return window.innerHeight;
+  },
   PLAYER_RADIUS: 10,
   MOVE_SPEED: 150,
   WALL_THICKNESS: 10,
-  SPAWN_X: 400,
-  SPAWN_Y: 520,
+  get SPAWN_X() {
+    return this.CANVAS_WIDTH * 0.5;
+  },
+  get SPAWN_Y() {
+    return this.CANVAS_HEIGHT * 0.5;
+  },
   MAX_NAME_LENGTH: 16
 };
 

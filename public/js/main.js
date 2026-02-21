@@ -3,6 +3,7 @@ import Input from './input.js';
 import Network from './network.js';
 import Renderer from './renderer.js';
 import { SPRITE_CONFIG } from './sprites.js';
+import Audio from './audio.js';
 
 var nameOverlay = null;
 var nameInput = null;
@@ -13,12 +14,10 @@ var lastSentX = null;
 var lastSentY = null;
 var tabFocused = true;
 var trackedPlayers = {};
+var resizeTimer = null;
+var RESIZE_DEBOUNCE_MS = 150;
 
 var C = Game.CONSTANTS;
-var MIN_X = C.WALL_THICKNESS + C.PLAYER_RADIUS;
-var MAX_X = C.CANVAS_WIDTH - C.WALL_THICKNESS - C.PLAYER_RADIUS;
-var MIN_Y = C.WALL_THICKNESS + C.PLAYER_RADIUS;
-var MAX_Y = C.CANVAS_HEIGHT - C.WALL_THICKNESS - C.PLAYER_RADIUS;
 
 function init() {
   nameOverlay = document.getElementById('nameOverlay');
@@ -27,6 +26,7 @@ function init() {
 
   Renderer.init(document.body);
   Input.init();
+  Audio.init();
   Network.connect();
 
   nameSubmit.addEventListener('click', handleNameSubmit);
@@ -45,7 +45,10 @@ function init() {
   });
 
   window.addEventListener('resize', function () {
-    Renderer.handleResize();
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      Renderer.handleResize();
+    }, RESIZE_DEBOUNCE_MS);
   });
 }
 
@@ -82,6 +85,7 @@ function gameLoop(timestamp) {
   update(deltaTime);
   updateAnimation(deltaTime);
   syncPlayers();
+  Audio.updateNowPlayingUI();
   Renderer.render();
 }
 
@@ -111,8 +115,13 @@ function update(deltaTime) {
   var newX = player.x + movement.dx * C.MOVE_SPEED * deltaTime;
   var newY = player.y + movement.dy * C.MOVE_SPEED * deltaTime;
 
-  newX = Math.max(MIN_X, Math.min(MAX_X, newX));
-  newY = Math.max(MIN_Y, Math.min(MAX_Y, newY));
+  var minX = C.WALL_THICKNESS + C.PLAYER_RADIUS;
+  var maxX = C.CANVAS_WIDTH - C.WALL_THICKNESS - C.PLAYER_RADIUS;
+  var minY = C.WALL_THICKNESS + C.PLAYER_RADIUS;
+  var maxY = C.CANVAS_HEIGHT - C.WALL_THICKNESS - C.PLAYER_RADIUS;
+
+  newX = Math.max(minX, Math.min(maxX, newX));
+  newY = Math.max(minY, Math.min(maxY, newY));
 
   player.x = newX;
   player.y = newY;
