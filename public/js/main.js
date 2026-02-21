@@ -1,211 +1,122 @@
-import Game from './game.js';
-import Input from './input.js';
-import Network from './network.js';
-import Renderer from './renderer.js';
-import { SPRITE_CONFIG } from './sprites.js';
-import Audio from './audio.js';
+(function () {
+  'use strict';
 
-var nameOverlay = null;
-var nameInput = null;
-var nameSubmit = null;
-var running = false;
-var lastTimestamp = 0;
-var lastSentX = null;
-var lastSentY = null;
-var tabFocused = true;
-var trackedPlayers = {};
-var resizeTimer = null;
-var RESIZE_DEBOUNCE_MS = 150;
+  var canvas = null;
+  var nameOverlay = null;
+  var nameInput = null;
+  var nameSubmit = null;
+  var running = false;
+  var lastTimestamp = 0;
+  var lastSentX = null;
+  var lastSentY = null;
+  var tabFocused = true;
 
-var C = Game.CONSTANTS;
+  var C = Game.CONSTANTS;
+  var MIN_X = C.WALL_THICKNESS + C.PLAYER_RADIUS;
+  var MAX_X = C.WORLD_WIDTH - C.WALL_THICKNESS - C.PLAYER_RADIUS;
+  var MIN_Y = C.WALL_THICKNESS + C.PLAYER_RADIUS;
+  var MAX_Y = C.WORLD_HEIGHT - C.WALL_THICKNESS - C.PLAYER_RADIUS;
 
-function init() {
-  nameOverlay = document.getElementById('nameOverlay');
-  nameInput = document.getElementById('nameInput');
-  nameSubmit = document.getElementById('nameSubmit');
+  function init() {
+    canvas = document.getElementById('gameCanvas');
+    nameOverlay = document.getElementById('nameOverlay');
+    nameInput = document.getElementById('nameInput');
+    nameSubmit = document.getElementById('nameSubmit');
 
-  Renderer.init(document.body);
-  Input.init();
-  Audio.init();
-  Network.connect();
+    Renderer.init(canvas);
+    Input.init(canvas);
+    Network.connect();
 
-  nameSubmit.addEventListener('click', handleNameSubmit);
-  nameInput.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') {
-      handleNameSubmit();
-    }
-  });
-
-  window.addEventListener('focus', function () {
-    tabFocused = true;
-  });
-
-  window.addEventListener('blur', function () {
-    tabFocused = false;
-  });
-
-  window.addEventListener('resize', function () {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function () {
-      Renderer.handleResize();
-    }, RESIZE_DEBOUNCE_MS);
-  });
-}
-
-function handleNameSubmit() {
-  var name = (nameInput.value || '').trim();
-  if (name.length < 1 || name.length > C.MAX_NAME_LENGTH) {
-    return;
-  }
-
-  Game.localPlayer.name = name;
-  Network.sendJoin(name);
-
-  nameOverlay.style.display = 'none';
-  running = true;
-  lastTimestamp = 0;
-
-  Renderer.getRenderer().setAnimationLoop(gameLoop);
-}
-
-function gameLoop(timestamp) {
-  if (!running) {
-    return;
-  }
-
-  var deltaTime = 0;
-  if (lastTimestamp > 0) {
-    deltaTime = (timestamp - lastTimestamp) / 1000;
-  }
-  if (deltaTime > 0.1) {
-    deltaTime = 0.1;
-  }
-  lastTimestamp = timestamp;
-
-  update(deltaTime);
-  updateAnimation(deltaTime);
-  syncPlayers();
-  Audio.updateNowPlayingUI();
-  Renderer.render();
-}
-
-function update(deltaTime) {
-  if (!tabFocused) {
-    return;
-  }
-
-  var movement = Input.getMovement();
-  var player = Game.localPlayer;
-
-  // Calculate movement state
-  var isMoving = movement.dx !== 0 || movement.dy !== 0;
-  player.isMoving = isMoving;
-
-  if (!isMoving) {
-    return;
-  }
-
-  // Calculate direction based on dominant axis
-  if (Math.abs(movement.dy) > Math.abs(movement.dx)) {
-    player.direction = movement.dy > 0 ? 'down' : 'up';
-  } else {
-    player.direction = movement.dx > 0 ? 'right' : 'left';
-  }
-
-  var newX = player.x + movement.dx * C.MOVE_SPEED * deltaTime;
-  var newY = player.y + movement.dy * C.MOVE_SPEED * deltaTime;
-
-  var minX = C.WALL_THICKNESS + C.PLAYER_RADIUS;
-  var maxX = C.CANVAS_WIDTH - C.WALL_THICKNESS - C.PLAYER_RADIUS;
-  var minY = C.WALL_THICKNESS + C.PLAYER_RADIUS;
-  var maxY = C.CANVAS_HEIGHT - C.WALL_THICKNESS - C.PLAYER_RADIUS;
-
-  newX = Math.max(minX, Math.min(maxX, newX));
-  newY = Math.max(minY, Math.min(maxY, newY));
-
-  player.x = newX;
-  player.y = newY;
-
-  Renderer.updatePlayerPosition(player.id, newX, newY, player.direction, player.animationFrame);
-
-  if (newX !== lastSentX || newY !== lastSentY) {
-    Network.sendMove(newX, newY);
-    lastSentX = newX;
-    lastSentY = newY;
-  }
-}
-
-function updateAnimation(deltaTime) {
-  var player = Game.localPlayer;
-  var previousFrame = player.animationFrame;
-
-  if (player.isMoving) {
-    // Accumulate animation time
-    player.animationTime += deltaTime;
-
-    // Calculate frame duration (1 / animationSpeed)
-    var frameDuration = 1 / SPRITE_CONFIG.animationSpeed;
-
-    // Advance frame when enough time has passed
-    if (player.animationTime >= frameDuration) {
-      player.animationTime -= frameDuration;
-
-      // Cycle through walk frames [1, 2, 3]
-      var walkFrames = SPRITE_CONFIG.animations.walk;
-      var currentFrameIndex = walkFrames.indexOf(player.animationFrame);
-
-      if (currentFrameIndex === -1) {
-        // Not in walk cycle, start at first walk frame
-        player.animationFrame = walkFrames[0];
-      } else {
-        // Move to next walk frame, cycling back to start
-        var nextIndex = (currentFrameIndex + 1) % walkFrames.length;
-        player.animationFrame = walkFrames[nextIndex];
+    nameSubmit.addEventListener('click', handleNameSubmit);
+    nameInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        handleNameSubmit();
       }
-    }
-  } else {
-    // Not moving - show idle frame and reset animation time
-    player.animationFrame = SPRITE_CONFIG.animations.idle;
-    player.animationTime = 0;
+    });
+
+    window.addEventListener('focus', function () {
+      tabFocused = true;
+    });
+
+    window.addEventListener('blur', function () {
+      tabFocused = false;
+    });
   }
 
-  // Only update renderer if animation frame actually changed
-  if (player.id && previousFrame !== player.animationFrame) {
-    Renderer.updatePlayerSprite(player.id, player.direction, player.animationFrame);
-  }
-}
-
-function syncPlayers() {
-  var localId = Game.localPlayer.id;
-
-  // Ensure local player mesh exists
-  if (localId && !trackedPlayers[localId]) {
-    Renderer.addPlayer(localId, Game.localPlayer.name, true, Game.localPlayer.characterId);
-    Renderer.updatePlayerPosition(localId, Game.localPlayer.x, Game.localPlayer.y, Game.localPlayer.direction, Game.localPlayer.animationFrame);
-    trackedPlayers[localId] = true;
-  }
-
-  // Add/update remote players
-  Game.remotePlayers.forEach(function (player, id) {
-    if (!trackedPlayers[id]) {
-      Renderer.addPlayer(id, player.name, false, player.characterId);
-      trackedPlayers[id] = true;
+  function handleNameSubmit() {
+    var name = (nameInput.value || '').trim();
+    if (name.length < 1 || name.length > C.MAX_NAME_LENGTH) {
+      return;
     }
-    Renderer.updatePlayerPosition(id, player.x, player.y, player.direction, player.animationFrame);
-  });
 
-  // Remove players no longer in Game state
-  var keys = Object.keys(trackedPlayers);
-  for (var i = 0; i < keys.length; i++) {
-    var id = keys[i];
-    if (id === localId) {
-      continue;
+    Game.localPlayer.name = name;
+    Network.sendJoin(name);
+
+    nameOverlay.style.display = 'none';
+    running = true;
+    lastTimestamp = 0;
+    requestAnimationFrame(gameLoop);
+  }
+
+  function gameLoop(timestamp) {
+    if (!running) {
+      return;
     }
-    if (!Game.remotePlayers.has(id)) {
-      Renderer.removePlayer(id);
-      delete trackedPlayers[id];
+
+    var deltaTime = 0;
+    if (lastTimestamp > 0) {
+      deltaTime = (timestamp - lastTimestamp) / 1000;
+    }
+    if (deltaTime > 0.1) {
+      deltaTime = 0.1;
+    }
+    lastTimestamp = timestamp;
+
+    update(deltaTime);
+    render();
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  function update(deltaTime) {
+    if (!tabFocused) {
+      return;
+    }
+
+    // Drink system ticks even when standing still
+    Game.updateDrinkSystem(deltaTime);
+
+    // Crowd NPCs move even when player is still
+    Game.updateCrowd(deltaTime);
+
+    var movement = Input.getMovement();
+    if (movement.dx === 0 && movement.dy === 0) {
+      return;
+    }
+
+    var player = Game.localPlayer;
+    var newX = player.x + movement.dx * C.MOVE_SPEED * deltaTime;
+    var newY = player.y + movement.dy * C.MOVE_SPEED * deltaTime;
+
+    newX = Math.max(MIN_X, Math.min(MAX_X, newX));
+    newY = Math.max(MIN_Y, Math.min(MAX_Y, newY));
+
+    player.x = newX;
+    player.y = newY;
+
+    // Kick ground drinks when walking over them
+    Game.kickNearbyDrink(player.x, player.y);
+
+    if (newX !== lastSentX || newY !== lastSentY) {
+      Network.sendMove(newX, newY);
+      lastSentX = newX;
+      lastSentY = newY;
     }
   }
-}
 
-document.addEventListener('DOMContentLoaded', init);
+  function render() {
+    Renderer.render();
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
