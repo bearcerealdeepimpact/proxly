@@ -2,6 +2,7 @@ import Game from './game.js';
 import Input from './input.js';
 import Network from './network.js';
 import Renderer from './renderer.js';
+import { SPRITE_CONFIG } from './sprites.js';
 import Audio from './audio.js';
 
 var nameOverlay = null;
@@ -82,6 +83,7 @@ function gameLoop(timestamp) {
   lastTimestamp = timestamp;
 
   update(deltaTime);
+  updateAnimation(deltaTime);
   syncPlayers();
   Audio.updateNowPlayingUI();
   Renderer.render();
@@ -93,11 +95,23 @@ function update(deltaTime) {
   }
 
   var movement = Input.getMovement();
-  if (movement.dx === 0 && movement.dy === 0) {
+  var player = Game.localPlayer;
+
+  // Calculate movement state
+  var isMoving = movement.dx !== 0 || movement.dy !== 0;
+  player.isMoving = isMoving;
+
+  if (!isMoving) {
     return;
   }
 
-  var player = Game.localPlayer;
+  // Calculate direction based on dominant axis
+  if (Math.abs(movement.dy) > Math.abs(movement.dx)) {
+    player.direction = movement.dy > 0 ? 'down' : 'up';
+  } else {
+    player.direction = movement.dx > 0 ? 'right' : 'left';
+  }
+
   var newX = player.x + movement.dx * C.MOVE_SPEED * deltaTime;
   var newY = player.y + movement.dy * C.MOVE_SPEED * deltaTime;
 
@@ -112,7 +126,7 @@ function update(deltaTime) {
   player.x = newX;
   player.y = newY;
 
-  Renderer.updatePlayerPosition(player.id, newX, newY);
+  Renderer.updatePlayerPosition(player.id, newX, newY, player.direction, player.animationFrame);
 
   if (newX !== lastSentX || newY !== lastSentY) {
     Network.sendMove(newX, newY);
@@ -121,23 +135,63 @@ function update(deltaTime) {
   }
 }
 
+function updateAnimation(deltaTime) {
+  var player = Game.localPlayer;
+  var previousFrame = player.animationFrame;
+
+  if (player.isMoving) {
+    // Accumulate animation time
+    player.animationTime += deltaTime;
+
+    // Calculate frame duration (1 / animationSpeed)
+    var frameDuration = 1 / SPRITE_CONFIG.animationSpeed;
+
+    // Advance frame when enough time has passed
+    if (player.animationTime >= frameDuration) {
+      player.animationTime -= frameDuration;
+
+      // Cycle through walk frames [1, 2, 3]
+      var walkFrames = SPRITE_CONFIG.animations.walk;
+      var currentFrameIndex = walkFrames.indexOf(player.animationFrame);
+
+      if (currentFrameIndex === -1) {
+        // Not in walk cycle, start at first walk frame
+        player.animationFrame = walkFrames[0];
+      } else {
+        // Move to next walk frame, cycling back to start
+        var nextIndex = (currentFrameIndex + 1) % walkFrames.length;
+        player.animationFrame = walkFrames[nextIndex];
+      }
+    }
+  } else {
+    // Not moving - show idle frame and reset animation time
+    player.animationFrame = SPRITE_CONFIG.animations.idle;
+    player.animationTime = 0;
+  }
+
+  // Only update renderer if animation frame actually changed
+  if (player.id && previousFrame !== player.animationFrame) {
+    Renderer.updatePlayerSprite(player.id, player.direction, player.animationFrame);
+  }
+}
+
 function syncPlayers() {
   var localId = Game.localPlayer.id;
 
   // Ensure local player mesh exists
   if (localId && !trackedPlayers[localId]) {
-    Renderer.addPlayer(localId, Game.localPlayer.name, true);
-    Renderer.updatePlayerPosition(localId, Game.localPlayer.x, Game.localPlayer.y);
+    Renderer.addPlayer(localId, Game.localPlayer.name, true, Game.localPlayer.characterId);
+    Renderer.updatePlayerPosition(localId, Game.localPlayer.x, Game.localPlayer.y, Game.localPlayer.direction, Game.localPlayer.animationFrame);
     trackedPlayers[localId] = true;
   }
 
   // Add/update remote players
   Game.remotePlayers.forEach(function (player, id) {
     if (!trackedPlayers[id]) {
-      Renderer.addPlayer(id, player.name, false);
+      Renderer.addPlayer(id, player.name, false, player.characterId);
       trackedPlayers[id] = true;
     }
-    Renderer.updatePlayerPosition(id, player.x, player.y);
+    Renderer.updatePlayerPosition(id, player.x, player.y, player.direction, player.animationFrame);
   });
 
   // Remove players no longer in Game state

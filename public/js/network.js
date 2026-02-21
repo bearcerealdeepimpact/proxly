@@ -128,7 +128,11 @@ function send(obj) {
 }
 
 function sendJoin(name) {
-  send({ type: 'join', name: name });
+  send({
+    type: 'join',
+    name: name,
+    characterId: Game.localPlayer.characterId
+  });
 }
 
 var pendingMoveTimer = null;

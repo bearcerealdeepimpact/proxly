@@ -96,6 +96,12 @@ wss.on('connection', (ws) => {
       const name = typeof msg.name === 'string'
         ? msg.name.trim().slice(0, 16)
         : '';
+
+      // Validate and store characterId from client
+      const characterId = typeof msg.characterId === 'number'
+        ? Math.max(0, Math.min(5, Math.floor(msg.characterId)))
+        : Math.floor(Math.random() * 6);  // Fallback if not provided
+
       if (!name) return;
 
       if (playerId && players.has(playerId)) {
@@ -104,7 +110,7 @@ wss.on('connection', (ws) => {
       }
 
       playerId = crypto.randomUUID();
-      const player = { id: playerId, name, x: SPAWN_X, y: SPAWN_Y, ws };
+      const player = { id: playerId, name, x: SPAWN_X, y: SPAWN_Y, characterId, ws };
       players.set(playerId, player);
 
       const existingPlayers = [];

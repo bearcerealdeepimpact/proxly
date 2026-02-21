@@ -6,10 +6,19 @@
   "scripts": {
     "start": "node server/index.js"
   },
-  "keywords": ["game", "multiplayer", "websocket", "music-club"],
+  "keywords": [
+    "game",
+    "multiplayer",
+    "websocket",
+    "music-club"
+  ],
   "license": "ISC",
   "dependencies": {
     "express": "^4.21.0",
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "jimp": "^1.6.0",
+    "three": "^0.182.0"
   }
 }
