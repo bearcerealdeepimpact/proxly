@@ -170,6 +170,18 @@ function sendMove(x, y) {
   send({ type: 'move', x: x, y: y });
 }
 
+function sendDrinkOrder(drinkType) {
+  send({ type: 'order_drink', drinkType: drinkType });
+}
+
+function sendDrinkDrop() {
+  send({ type: 'drop_drink' });
+}
+
+function sendDrinkKick(drinkId) {
+  send({ type: 'kick_drink', drinkId: drinkId });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   var reconnectBtn = document.getElementById('reconnectBtn');
   if (reconnectBtn) {
@@ -186,5 +198,8 @@ document.addEventListener('DOMContentLoaded', function () {
 export default {
   connect: connect,
   sendJoin: sendJoin,
-  sendMove: sendMove
+  sendMove: sendMove,
+  sendDrinkOrder: sendDrinkOrder,
+  sendDrinkDrop: sendDrinkDrop,
+  sendDrinkKick: sendDrinkKick
 };
