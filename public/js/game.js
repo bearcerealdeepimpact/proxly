@@ -13,7 +13,12 @@ var localPlayer = {
   id: null,
   name: '',
   x: CONSTANTS.SPAWN_X,
-  y: CONSTANTS.SPAWN_Y
+  y: CONSTANTS.SPAWN_Y,
+  direction: 'S',
+  isMoving: false,
+  animationFrame: 0,
+  animationTime: 0,
+  characterId: Math.floor(Math.random() * 6)
 };
 
 var remotePlayers = new Map();
@@ -29,7 +34,12 @@ function addPlayer(player) {
     id: player.id,
     name: (player.name || '').substring(0, CONSTANTS.MAX_NAME_LENGTH),
     x: player.x || CONSTANTS.SPAWN_X,
-    y: player.y || CONSTANTS.SPAWN_Y
+    y: player.y || CONSTANTS.SPAWN_Y,
+    direction: player.direction || 'S',
+    isMoving: player.isMoving || false,
+    animationFrame: player.animationFrame || 0,
+    animationTime: player.animationTime || 0,
+    characterId: player.characterId !== undefined ? player.characterId : Math.floor(Math.random() * 6)
   });
 }
 
