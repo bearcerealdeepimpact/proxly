@@ -79,7 +79,7 @@ wss.on('connection', (ws) => {
         type: 'welcome',
         id: playerId,
         players: existingPlayers,
-        drinks: drinks,
+        groundDrinks: drinks,
       }));
 
       broadcastToOthers(ws, {
