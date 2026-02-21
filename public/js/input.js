@@ -18,6 +18,10 @@
         Game.tryOrderDrink();
       }
 
+      if (key === 'q') {
+        Game.dropDrink();
+      }
+
       // Zoom with +/- keys
       if (key === '+' || key === '=' || e.key === '+') {
         e.preventDefault();

@@ -15,6 +15,7 @@ const wss = new WebSocketServer({ server });
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 const players = new Map();
+const groundDrinks = new Map(); // id -> { id, x, y, vx, vy, color, fadeTimer }
 
 const playlist = [
   { title: 'Electric Dreams', artist: 'Neon Skyline', filename: 'electric-dreams.mp3', duration: 203 },
@@ -110,7 +111,7 @@ wss.on('connection', (ws) => {
       }
 
       playerId = crypto.randomUUID();
-      const player = { id: playerId, name, x: SPAWN_X, y: SPAWN_Y, characterId, ws };
+      const player = { id: playerId, name, x: SPAWN_X, y: SPAWN_Y, characterId, drinkState: 'none', drinkColor: null, ws };
       players.set(playerId, player);
 
       const existingPlayers = [];
@@ -120,10 +121,14 @@ wss.on('connection', (ws) => {
         }
       });
 
+      const groundDrinksArray = [];
+      groundDrinks.forEach((d) => { groundDrinksArray.push(d); });
+
       ws.send(JSON.stringify({
         type: 'welcome',
         id: playerId,
         players: existingPlayers,
+        groundDrinks: groundDrinksArray,
       }));
 
       ws.send(JSON.stringify({
@@ -155,6 +160,73 @@ wss.on('connection', (ws) => {
         id: playerId,
         x,
         y,
+      });
+    }
+
+    if (msg.type === 'drink_order' && playerId) {
+      const player = players.get(playerId);
+      if (!player) return;
+      player.drinkState = 'ordering';
+      player.drinkColor = typeof msg.drinkColor === 'string' ? msg.drinkColor : null;
+      broadcastToOthers(ws, {
+        type: 'drink_update',
+        id: playerId,
+        drinkState: player.drinkState,
+        drinkColor: player.drinkColor,
+      });
+    }
+
+    if (msg.type === 'drink_carry' && playerId) {
+      const player = players.get(playerId);
+      if (!player) return;
+      player.drinkState = 'carrying';
+      broadcastToOthers(ws, {
+        type: 'drink_update',
+        id: playerId,
+        drinkState: player.drinkState,
+        drinkColor: player.drinkColor,
+      });
+    }
+
+    if (msg.type === 'drink_drop' && playerId) {
+      const player = players.get(playerId);
+      if (!player) return;
+
+      const drinkId = typeof msg.id === 'string' ? msg.id : crypto.randomUUID();
+      const x = typeof msg.x === 'number' ? msg.x : player.x;
+      const y = typeof msg.y === 'number' ? msg.y : player.y;
+      const color = typeof msg.color === 'string' ? msg.color : player.drinkColor;
+
+      const drink = { id: drinkId, x, y, vx: 0, vy: 0, color };
+      groundDrinks.set(drinkId, drink);
+
+      player.drinkState = 'none';
+      player.drinkColor = null;
+
+      broadcastToOthers(ws, {
+        type: 'drink_dropped',
+        playerId,
+        drink,
+      });
+
+      // Auto-remove after fade time (8 seconds)
+      setTimeout(() => { groundDrinks.delete(drinkId); }, 8000);
+    }
+
+    if (msg.type === 'drink_kick' && playerId) {
+      const drinkId = typeof msg.drinkId === 'string' ? msg.drinkId : null;
+      if (!drinkId) return;
+      const drink = groundDrinks.get(drinkId);
+      if (!drink) return;
+
+      drink.vx = typeof msg.vx === 'number' ? msg.vx : 0;
+      drink.vy = typeof msg.vy === 'number' ? msg.vy : 0;
+
+      broadcastToOthers(ws, {
+        type: 'drink_kicked',
+        drinkId,
+        vx: drink.vx,
+        vy: drink.vy,
       });
     }
   });

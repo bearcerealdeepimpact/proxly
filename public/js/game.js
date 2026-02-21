@@ -46,7 +46,9 @@
       id: player.id,
       name: (player.name || '').substring(0, CONSTANTS.MAX_NAME_LENGTH),
       x: player.x || CONSTANTS.SPAWN_X,
-      y: player.y || CONSTANTS.SPAWN_Y
+      y: player.y || CONSTANTS.SPAWN_Y,
+      drinkState: player.drinkState || 'none',
+      drinkColor: player.drinkColor || null
     });
   }
 
@@ -79,6 +81,44 @@
     return players;
   }
 
+  function updateRemotePlayerDrink(id, drinkState, drinkColor) {
+    var player = remotePlayers.get(id);
+    if (player) {
+      player.drinkState = drinkState || 'none';
+      player.drinkColor = drinkColor || null;
+    }
+  }
+
+  function generateId() {
+    return 'xxxx-xxxx-xxxx'.replace(/x/g, function () {
+      return Math.floor(Math.random() * 16).toString(16);
+    });
+  }
+
+  function addGroundDrink(drink) {
+    if (!drink) return;
+    groundDrinks.push({
+      id: drink.id || generateId(),
+      x: drink.x,
+      y: drink.y,
+      vx: drink.vx || 0,
+      vy: drink.vy || 0,
+      alpha: 1,
+      fadeTimer: CONSTANTS.DRINK_FADE_TIME,
+      color: drink.color
+    });
+  }
+
+  function updateGroundDrinkVelocity(drinkId, vx, vy) {
+    for (var i = 0; i < groundDrinks.length; i++) {
+      if (groundDrinks[i].id === drinkId) {
+        groundDrinks[i].vx = vx;
+        groundDrinks[i].vy = vy;
+        return;
+      }
+    }
+  }
+
   // ─── Drink system ──────────────────────────────────────────────────
 
   var DRINK_COLORS = ['#c87533', '#a0522d', '#d2691e', '#b8860b', '#cd853f'];
@@ -98,23 +138,28 @@
     localPlayer.drinkState = 'ordering';
     localPlayer.drinkOrderTimer = CONSTANTS.DRINK_ORDER_TIME;
     localPlayer.drinkColor = DRINK_COLORS[Math.floor(Math.random() * DRINK_COLORS.length)];
+    Network.sendDrinkOrder(localPlayer.drinkColor);
   }
 
   function dropDrink() {
     if (localPlayer.drinkState !== 'carrying') return;
     var angle = Math.random() * Math.PI * 2;
+    var drinkId = generateId();
+    var color = localPlayer.drinkColor || DRINK_COLORS[0];
     groundDrinks.push({
+      id: drinkId,
       x: localPlayer.x,
       y: localPlayer.y,
       vx: Math.cos(angle) * CONSTANTS.DRINK_KICK_SPEED * 0.3,
       vy: Math.sin(angle) * CONSTANTS.DRINK_KICK_SPEED * 0.3,
       alpha: 1,
       fadeTimer: CONSTANTS.DRINK_FADE_TIME,
-      color: localPlayer.drinkColor || DRINK_COLORS[0]
+      color: color
     });
     localPlayer.drinkState = 'none';
     localPlayer.drinkTimer = 0;
     localPlayer.drinkColor = null;
+    Network.sendDrinkDrop(localPlayer.x, localPlayer.y, color, drinkId);
   }
 
   function updateDrinkSystem(dt) {
@@ -124,6 +169,7 @@
       if (localPlayer.drinkOrderTimer <= 0) {
         localPlayer.drinkState = 'carrying';
         localPlayer.drinkTimer = CONSTANTS.DRINK_CARRY_TIME;
+        Network.sendDrinkCarry();
       }
     }
 
@@ -165,6 +211,9 @@
       if (dist < 8 && dist > 0.1) {
         drink.vx = (dx / dist) * CONSTANTS.DRINK_KICK_SPEED;
         drink.vy = (dy / dist) * CONSTANTS.DRINK_KICK_SPEED;
+        if (drink.id) {
+          Network.sendDrinkKick(drink.id, drink.vx, drink.vy);
+        }
       }
     }
   }
@@ -330,9 +379,12 @@
     addPlayer: addPlayer,
     removePlayer: removePlayer,
     updatePlayerPosition: updatePlayerPosition,
+    updateRemotePlayerDrink: updateRemotePlayerDrink,
     getLocalPlayer: getLocalPlayer,
     getAllPlayers: getAllPlayers,
     groundDrinks: groundDrinks,
+    addGroundDrink: addGroundDrink,
+    updateGroundDrinkVelocity: updateGroundDrinkVelocity,
     isNearBar: isNearBar,
     tryOrderDrink: tryOrderDrink,
     updateDrinkSystem: updateDrinkSystem,
