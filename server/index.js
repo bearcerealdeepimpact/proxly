@@ -17,11 +17,12 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 const players = new Map();
 
 const playlist = [
-  { name: 'Chill Vibes', url: '/music/track1.mp3', duration: 180 },
-  { name: 'Sunset Dreams', url: '/music/track2.mp3', duration: 210 },
-  { name: 'Night Cruise', url: '/music/track3.mp3', duration: 195 },
-  { name: 'Cyber Flow', url: '/music/track4.mp3', duration: 220 },
-  { name: 'Neon Pulse', url: '/music/track5.mp3', duration: 200 },
+  { title: 'Electric Dreams', artist: 'Neon Skyline', filename: 'electric-dreams.mp3', duration: 203 },
+  { title: 'Midnight Groove', artist: 'The Funkateers', filename: 'midnight-groove.mp3', duration: 185 },
+  { title: 'Cosmic Voyage', artist: 'Stellar Collective', filename: 'cosmic-voyage.mp3', duration: 247 },
+  { title: 'Urban Pulse', artist: 'City Rhythms', filename: 'urban-pulse.mp3', duration: 192 },
+  { title: 'Sunset Boulevard', artist: 'LA Soundwaves', filename: 'sunset-boulevard.mp3', duration: 218 },
+  { title: 'Digital Horizons', artist: 'Synthwave Alliance', filename: 'digital-horizons.mp3', duration: 234 },
 ];
 
 const musicState = {
@@ -124,6 +125,7 @@ wss.on('connection', (ws) => {
         currentTrackIndex: musicState.currentTrackIndex,
         trackStartTime: musicState.trackStartTime,
         serverStartTime: musicState.serverStartTime,
+        serverTime: Date.now(),
         playlist,
       }));
 
