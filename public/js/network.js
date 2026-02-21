@@ -176,15 +176,15 @@ function sendMove(x, y) {
 }
 
 function sendDrinkOrder(drinkType) {
-  send({ type: 'order_drink', drinkType: drinkType });
+  send({ type: 'drink_order', drinkType: drinkType });
 }
 
 function sendDrinkDrop() {
-  send({ type: 'drop_drink' });
+  send({ type: 'drink_drop' });
 }
 
 function sendDrinkKick(drinkId) {
-  send({ type: 'kick_drink', drinkId: drinkId });
+  send({ type: 'drink_kick', drinkId: drinkId });
 }
 
 document.addEventListener('DOMContentLoaded', function () {
