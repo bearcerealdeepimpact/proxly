@@ -7,3 +7,7 @@
 .worktrees/
 .security-key
 logs/security/
+
+# Dependencies
+node_modules/
+
