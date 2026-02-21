@@ -322,6 +322,11 @@ function updatePlayerSprite(id, direction, animationFrame) {
     return;
   }
 
+  // Skip update if direction and frame haven't changed
+  if (player.direction === direction && player.animationFrame === animationFrame) {
+    return;
+  }
+
   var config = SpriteManager.SPRITE_CONFIG;
   var frameU = config.frameWidth / config.textureWidth;
   var frameV = config.frameHeight / config.textureHeight;

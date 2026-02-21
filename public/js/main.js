@@ -128,6 +128,7 @@ function update(deltaTime) {
 
 function updateAnimation(deltaTime) {
   var player = Game.localPlayer;
+  var previousFrame = player.animationFrame;
 
   if (player.isMoving) {
     // Accumulate animation time
@@ -159,9 +160,9 @@ function updateAnimation(deltaTime) {
     player.animationTime = 0;
   }
 
-  // Update renderer with current direction and animation frame
-  if (player.id) {
-    Renderer.updatePlayerPosition(player.id, player.x, player.y, player.direction, player.animationFrame);
+  // Only update renderer if animation frame actually changed
+  if (player.id && previousFrame !== player.animationFrame) {
+    Renderer.updatePlayerSprite(player.id, player.direction, player.animationFrame);
   }
 }
 
