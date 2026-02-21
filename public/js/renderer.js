@@ -294,7 +294,7 @@ function removePlayer(id) {
   delete players[id];
 }
 
-function updatePlayerPosition(id, x, y) {
+function updatePlayerPosition(id, x, y, direction, animationFrame) {
   var player = players[id];
   if (!player) {
     return;
@@ -302,6 +302,38 @@ function updatePlayerPosition(id, x, y) {
 
   var pos = toWorld(x, y);
   player.mesh.position.set(pos.x, 0.75, pos.z);
+
+  // Update sprite UV coordinates if direction and animationFrame are provided
+  if (direction !== undefined && animationFrame !== undefined && player.texture) {
+    updatePlayerSprite(id, direction, animationFrame);
+  }
+}
+
+function updatePlayerSprite(id, direction, animationFrame) {
+  var player = players[id];
+  if (!player || !player.texture) {
+    return;
+  }
+
+  var config = SpriteManager.SPRITE_CONFIG;
+  var frameU = config.frameWidth / config.textureWidth;
+  var frameV = config.frameHeight / config.textureHeight;
+
+  // Map direction to row index
+  var directionRow = config.directions[direction];
+  if (directionRow === undefined) {
+    directionRow = config.directions.S; // Default to South if invalid
+  }
+
+  // Calculate UV offset
+  var offsetX = animationFrame * frameU; // Column position
+  var offsetY = directionRow * frameV;   // Row position
+
+  player.texture.offset.set(offsetX, offsetY);
+
+  // Store current state
+  player.direction = direction;
+  player.animationFrame = animationFrame;
 }
 
 function handleResize() {
@@ -338,6 +370,7 @@ export default {
   addPlayer: addPlayer,
   removePlayer: removePlayer,
   updatePlayerPosition: updatePlayerPosition,
+  updatePlayerSprite: updatePlayerSprite,
   getRenderer: getRenderer,
   handleResize: handleResize
 };
