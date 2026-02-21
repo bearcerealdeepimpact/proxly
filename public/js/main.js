@@ -12,6 +12,8 @@ var lastSentX = null;
 var lastSentY = null;
 var tabFocused = true;
 var trackedPlayers = {};
+var lastDrinkOrderTime = 0;
+var DRINK_ORDER_DEBOUNCE_MS = 500;
 
 var C = Game.CONSTANTS;
 var MIN_X = C.WALL_THICKNESS + C.PLAYER_RADIUS;
@@ -88,27 +90,40 @@ function update(deltaTime) {
     return;
   }
 
+  var player = Game.localPlayer;
+
   var movement = Input.getMovement();
-  if (movement.dx === 0 && movement.dy === 0) {
-    return;
+  if (movement.dx !== 0 || movement.dy !== 0) {
+    var newX = player.x + movement.dx * C.MOVE_SPEED * deltaTime;
+    var newY = player.y + movement.dy * C.MOVE_SPEED * deltaTime;
+
+    newX = Math.max(MIN_X, Math.min(MAX_X, newX));
+    newY = Math.max(MIN_Y, Math.min(MAX_Y, newY));
+
+    player.x = newX;
+    player.y = newY;
+
+    Renderer.updatePlayerPosition(player.id, newX, newY);
+
+    if (newX !== lastSentX || newY !== lastSentY) {
+      Network.sendMove(newX, newY);
+      lastSentX = newX;
+      lastSentY = newY;
+    }
   }
 
-  var player = Game.localPlayer;
-  var newX = player.x + movement.dx * C.MOVE_SPEED * deltaTime;
-  var newY = player.y + movement.dy * C.MOVE_SPEED * deltaTime;
-
-  newX = Math.max(MIN_X, Math.min(MAX_X, newX));
-  newY = Math.max(MIN_Y, Math.min(MAX_Y, newY));
-
-  player.x = newX;
-  player.y = newY;
-
-  Renderer.updatePlayerPosition(player.id, newX, newY);
-
-  if (newX !== lastSentX || newY !== lastSentY) {
-    Network.sendMove(newX, newY);
-    lastSentX = newX;
-    lastSentY = newY;
+  if (Input.isDrinkOrderPressed()) {
+    var now = Date.now();
+    if (now - lastDrinkOrderTime < DRINK_ORDER_DEBOUNCE_MS) {
+      return;
+    }
+    if (player.hasDrink) {
+      return;
+    }
+    if (player.x < 300 && player.y > 440) {
+      Network.sendDrinkOrder('beer');
+      lastDrinkOrderTime = now;
+    }
   }
 }
 
