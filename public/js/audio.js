@@ -8,6 +8,8 @@
   var trackDuration = 0;
   var autoplayUnlocked = false;
   var pendingTrack = null;
+  var ambientAudio = null;
+  var ambientVolume = 0.25;
 
   function init() {
     if (audio) {
@@ -24,6 +26,11 @@
       currentTrack = null;
     };
 
+    ambientAudio = new Audio();
+    ambientAudio.preload = 'auto';
+    ambientAudio.loop = true;
+    ambientAudio.src = '/audio/ambient-crowd.mp3';
+
     var volumeSlider = document.getElementById('volumeSlider');
     if (volumeSlider) {
       var savedVolume = localStorage.getItem('audioVolume');
@@ -31,8 +38,10 @@
         var volumeValue = parseInt(savedVolume, 10);
         volumeSlider.value = volumeValue;
         audio.volume = volumeValue / 100;
+        ambientAudio.volume = (volumeValue / 100) * ambientVolume;
       } else {
         audio.volume = volumeSlider.value / 100;
+        ambientAudio.volume = (volumeSlider.value / 100) * ambientVolume;
       }
 
       volumeSlider.addEventListener('input', function () {
@@ -59,6 +68,14 @@
         autoplayUnlocked = true;
         localStorage.setItem('autoplayUnlocked', 'true');
         hideAutoplayOverlay();
+
+        if (ambientAudio) {
+          var ambientPlayPromise = ambientAudio.play();
+          if (ambientPlayPromise !== undefined) {
+            ambientPlayPromise.catch(function (error) {
+            });
+          }
+        }
 
         if (pendingTrack) {
           playTrack(pendingTrack);
@@ -95,6 +112,14 @@
       pendingTrack = trackInfo;
       showAutoplayOverlay();
       return;
+    }
+
+    if (ambientAudio && ambientAudio.paused) {
+      var ambientPlayPromise = ambientAudio.play();
+      if (ambientPlayPromise !== undefined) {
+        ambientPlayPromise.catch(function (error) {
+        });
+      }
     }
 
     currentTrack = trackInfo;
@@ -190,6 +215,9 @@
 
     var volumeValue = Math.min(100, Math.max(0, value));
     audio.volume = volumeValue / 100;
+    if (ambientAudio) {
+      ambientAudio.volume = (volumeValue / 100) * ambientVolume;
+    }
     localStorage.setItem('audioVolume', volumeValue.toString());
 
     var volumeSlider = document.getElementById('volumeSlider');
