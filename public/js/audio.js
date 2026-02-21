@@ -137,6 +137,24 @@
     }
   }
 
+  function fadeInAudio(audioElement, targetVolume, duration) {
+    var startTime = Date.now();
+    var fadeDuration = duration || 1500;
+
+    function updateVolume() {
+      var elapsed = Date.now() - startTime;
+      var progress = Math.min(elapsed / fadeDuration, 1);
+      audioElement.volume = targetVolume * progress;
+
+      if (progress < 1) {
+        requestAnimationFrame(updateVolume);
+      }
+    }
+
+    audioElement.volume = 0;
+    requestAnimationFrame(updateVolume);
+  }
+
   function playTrack(trackInfo) {
     if (!audio) {
       init();
@@ -166,9 +184,14 @@
     currentTrack = trackInfo;
     currentAudio.src = trackInfo.url;
 
+    var volumeSlider = document.getElementById('volumeSlider');
+    var targetVolume = volumeSlider ? parseInt(volumeSlider.value, 10) / 100 : 0.5;
+
     var playPromise = currentAudio.play();
     if (playPromise !== undefined) {
-      playPromise.catch(function (error) {
+      playPromise.then(function () {
+        fadeInAudio(currentAudio, targetVolume, 1500);
+      }).catch(function (error) {
         currentTrack = null;
       });
     }
@@ -382,9 +405,14 @@
     var nextAudio = (currentAudio === audio) ? audioAlt : audio;
     currentAudio = nextAudio;
 
+    var volumeSlider = document.getElementById('volumeSlider');
+    var targetVolume = volumeSlider ? parseInt(volumeSlider.value, 10) / 100 : 0.5;
+
     var playPromise = currentAudio.play();
     if (playPromise !== undefined) {
-      playPromise.catch(function (error) {
+      playPromise.then(function () {
+        fadeInAudio(currentAudio, targetVolume, 1500);
+      }).catch(function (error) {
         currentTrack = null;
       });
     }
@@ -399,9 +427,14 @@
     }
 
     if (currentAudio.paused && autoplayUnlocked) {
+      var volumeSlider = document.getElementById('volumeSlider');
+      var targetVolume = volumeSlider ? parseInt(volumeSlider.value, 10) / 100 : 0.5;
+
       var playPromise = currentAudio.play();
       if (playPromise !== undefined) {
-        playPromise.catch(function (error) {
+        playPromise.then(function () {
+          fadeInAudio(currentAudio, targetVolume, 1500);
+        }).catch(function (error) {
         });
       }
     }
