@@ -89,11 +89,23 @@ function update(deltaTime) {
   }
 
   var movement = Input.getMovement();
-  if (movement.dx === 0 && movement.dy === 0) {
+  var player = Game.localPlayer;
+
+  // Calculate movement state
+  var isMoving = movement.dx !== 0 || movement.dy !== 0;
+  player.isMoving = isMoving;
+
+  if (!isMoving) {
     return;
   }
 
-  var player = Game.localPlayer;
+  // Calculate direction based on dominant axis
+  if (Math.abs(movement.dy) > Math.abs(movement.dx)) {
+    player.direction = movement.dy > 0 ? 'down' : 'up';
+  } else {
+    player.direction = movement.dx > 0 ? 'right' : 'left';
+  }
+
   var newX = player.x + movement.dx * C.MOVE_SPEED * deltaTime;
   var newY = player.y + movement.dy * C.MOVE_SPEED * deltaTime;
 
