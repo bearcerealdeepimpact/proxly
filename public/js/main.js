@@ -125,6 +125,12 @@ function update(deltaTime) {
       lastDrinkOrderTime = now;
     }
   }
+
+  if (Input.isDrinkDropPressed()) {
+    if (player.hasDrink) {
+      Network.sendDrinkDrop();
+    }
+  }
 }
 
 function syncPlayers() {
