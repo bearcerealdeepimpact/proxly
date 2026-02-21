@@ -34,8 +34,23 @@ function getMovement() {
   return { dx: dx, dy: dy };
 }
 
+function isDrinkOrderPressed() {
+  return keys['e'] === true;
+}
+
+function isDrinkDropPressed() {
+  return keys['q'] === true;
+}
+
+function isDrinkKickPressed() {
+  return keys['f'] === true;
+}
+
 export default {
   keys: keys,
   init: init,
-  getMovement: getMovement
+  getMovement: getMovement,
+  isDrinkOrderPressed: isDrinkOrderPressed,
+  isDrinkDropPressed: isDrinkDropPressed,
+  isDrinkKickPressed: isDrinkKickPressed
 };
