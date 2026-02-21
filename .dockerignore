@@ -1,0 +1,52 @@
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Version control
+.git
+.gitignore
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Auto Claude development tools
+.auto-claude
+.auto-claude-security.json
+.auto-claude-status
+.claude_settings.json
+.worktrees
+.security-key
+
+# Logs
+logs
+*.log
+
+# Development scripts (not needed in production)
+create_sprites.py
+create-character-variations.js
+create-sprite-variations.js
+
+# Docker files (avoid recursive copying)
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Documentation (if present)
+README.md
+*.md
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+coverage
+.nyc_output
