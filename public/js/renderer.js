@@ -174,6 +174,28 @@ function createLighting() {
   }
 }
 
+function createDrinkMesh() {
+  // Create cup-like geometry (cylinder with slightly tapered top)
+  var cupRadius = 0.15;
+  var cupHeight = 0.4;
+  var cupGeo = new THREE.CylinderGeometry(cupRadius, cupRadius * 0.8, cupHeight, 16);
+
+  // Glass material with transparency
+  var cupMat = new THREE.MeshStandardMaterial({
+    color: 0xaaddff,
+    transparent: true,
+    opacity: 0.6,
+    metalness: 0.1,
+    roughness: 0.2
+  });
+
+  var cup = new THREE.Mesh(cupGeo, cupMat);
+  cup.castShadow = true;
+  cup.receiveShadow = true;
+
+  return cup;
+}
+
 function init(containerElement) {
   if (!containerElement) {
     return;
