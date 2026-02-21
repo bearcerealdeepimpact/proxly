@@ -12,6 +12,7 @@ const TEST_TIMEOUT = 30000;
 describe('Drink State Synchronization E2E Tests', () => {
   let browser1, browser2;
   let page1, page2;
+  let serverProcess;
 
   // Helper to wait for element
   async function waitForElement(page, selector, timeout = 5000) {
@@ -87,7 +88,17 @@ describe('Drink State Synchronization E2E Tests', () => {
   }
 
   beforeAll(async () => {
-    // Launch two browser instances
+    // Start the server
+    const { spawn } = require('child_process');
+    serverProcess = spawn('node', ['server/index.js'], {
+      stdio: 'pipe',
+      env: { ...process.env, PORT: 3000 }
+    });
+
+    // Wait for server to initialize
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Then launch browsers
     browser1 = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -123,8 +134,14 @@ describe('Drink State Synchronization E2E Tests', () => {
   }, TEST_TIMEOUT);
 
   afterAll(async () => {
+    // Close browsers
     if (browser1) await browser1.close();
     if (browser2) await browser2.close();
+
+    // Kill server process
+    if (serverProcess) {
+      serverProcess.kill('SIGTERM');
+    }
   });
 
   test('AC1-2: Players can order drinks and see them in hands (synchronized)', async () => {
