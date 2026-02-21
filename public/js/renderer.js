@@ -331,8 +331,17 @@ function updatePlayerSprite(id, direction, animationFrame) {
   var frameU = config.frameWidth / config.textureWidth;
   var frameV = config.frameHeight / config.textureHeight;
 
+  // Map direction strings to sprite config format
+  var directionMap = {
+    'down': 'S',
+    'up': 'N',
+    'right': 'E',
+    'left': 'W'
+  };
+  var mappedDirection = directionMap[direction] || direction;
+
   // Map direction to row index
-  var directionRow = config.directions[direction];
+  var directionRow = config.directions[mappedDirection];
   if (directionRow === undefined) {
     directionRow = config.directions.S; // Default to South if invalid
   }
