@@ -14,6 +14,10 @@ const wss = new WebSocketServer({ server });
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 const players = new Map();
 const groundDrinks = new Map(); // id -> { id, x, y, vx, vy, color, fadeTimer }
 
