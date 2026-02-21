@@ -13,7 +13,9 @@ var localPlayer = {
   id: null,
   name: '',
   x: CONSTANTS.SPAWN_X,
-  y: CONSTANTS.SPAWN_Y
+  y: CONSTANTS.SPAWN_Y,
+  hasDrink: false,
+  drinkType: null
 };
 
 var remotePlayers = new Map();
@@ -29,7 +31,9 @@ function addPlayer(player) {
     id: player.id,
     name: (player.name || '').substring(0, CONSTANTS.MAX_NAME_LENGTH),
     x: player.x || CONSTANTS.SPAWN_X,
-    y: player.y || CONSTANTS.SPAWN_Y
+    y: player.y || CONSTANTS.SPAWN_Y,
+    hasDrink: player.hasDrink || false,
+    drinkType: player.drinkType || null
   });
 }
 
