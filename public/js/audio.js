@@ -21,6 +21,22 @@
     audio.onended = function () {
       currentTrack = null;
     };
+
+    var volumeSlider = document.getElementById('volumeSlider');
+    if (volumeSlider) {
+      var savedVolume = localStorage.getItem('audioVolume');
+      if (savedVolume !== null) {
+        var volumeValue = parseInt(savedVolume, 10);
+        volumeSlider.value = volumeValue;
+        audio.volume = volumeValue / 100;
+      } else {
+        audio.volume = volumeSlider.value / 100;
+      }
+
+      volumeSlider.addEventListener('input', function () {
+        setVolume(parseInt(volumeSlider.value, 10));
+      });
+    }
   }
 
   function playTrack(trackInfo) {
@@ -118,6 +134,21 @@
     }
   }
 
+  function setVolume(value) {
+    if (!audio) {
+      init();
+    }
+
+    var volumeValue = Math.min(100, Math.max(0, value));
+    audio.volume = volumeValue / 100;
+    localStorage.setItem('audioVolume', volumeValue.toString());
+
+    var volumeSlider = document.getElementById('volumeSlider');
+    if (volumeSlider) {
+      volumeSlider.value = volumeValue;
+    }
+  }
+
   function updateNowPlayingUI() {
     var nowPlayingEl = document.getElementById('nowPlaying');
     var trackTitleEl = document.querySelector('.track-title');
@@ -159,6 +190,7 @@
     syncToServer: syncToServer,
     handleMusicState: handleMusicState,
     handleMusicSync: handleMusicSync,
-    updateNowPlayingUI: updateNowPlayingUI
+    updateNowPlayingUI: updateNowPlayingUI,
+    setVolume: setVolume
   };
 })();
