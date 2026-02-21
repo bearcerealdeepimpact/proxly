@@ -6,6 +6,8 @@
   var serverTimeOffset = 0;
   var trackStartTime = 0;
   var trackDuration = 0;
+  var autoplayUnlocked = false;
+  var pendingTrack = null;
 
   function init() {
     if (audio) {
@@ -37,6 +39,47 @@
         setVolume(parseInt(volumeSlider.value, 10));
       });
     }
+
+    checkAutoplayUnlock();
+  }
+
+  function checkAutoplayUnlock() {
+    var unlocked = localStorage.getItem('autoplayUnlocked');
+    if (unlocked === 'true') {
+      autoplayUnlocked = true;
+    } else {
+      setupAutoplayUnlock();
+    }
+  }
+
+  function setupAutoplayUnlock() {
+    var unlockBtn = document.getElementById('autoplayUnlockBtn');
+    if (unlockBtn) {
+      unlockBtn.addEventListener('click', function () {
+        autoplayUnlocked = true;
+        localStorage.setItem('autoplayUnlocked', 'true');
+        hideAutoplayOverlay();
+
+        if (pendingTrack) {
+          playTrack(pendingTrack);
+          pendingTrack = null;
+        }
+      });
+    }
+  }
+
+  function showAutoplayOverlay() {
+    var overlay = document.getElementById('autoplayOverlay');
+    if (overlay) {
+      overlay.style.display = 'flex';
+    }
+  }
+
+  function hideAutoplayOverlay() {
+    var overlay = document.getElementById('autoplayOverlay');
+    if (overlay) {
+      overlay.style.display = 'none';
+    }
   }
 
   function playTrack(trackInfo) {
@@ -45,6 +88,12 @@
     }
 
     if (!trackInfo || !trackInfo.url) {
+      return;
+    }
+
+    if (!autoplayUnlocked) {
+      pendingTrack = trackInfo;
+      showAutoplayOverlay();
       return;
     }
 
