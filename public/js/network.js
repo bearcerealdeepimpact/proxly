@@ -105,6 +105,41 @@ function handleMessage(msg) {
     case 'player_left':
       Game.removePlayer(msg.id);
       break;
+
+    case 'drink_ordered':
+      if (msg.id === Game.localPlayer.id) {
+        Game.localPlayer.hasDrink = true;
+        Game.localPlayer.drinkType = msg.drinkType;
+      } else {
+        var player = Game.remotePlayers.get(msg.id);
+        if (player) {
+          player.hasDrink = true;
+          player.drinkType = msg.drinkType;
+        }
+      }
+      break;
+
+    case 'drink_dropped':
+      if (msg.playerId === Game.localPlayer.id) {
+        Game.localPlayer.hasDrink = false;
+        Game.localPlayer.drinkType = null;
+      } else {
+        var player = Game.remotePlayers.get(msg.playerId);
+        if (player) {
+          player.hasDrink = false;
+          player.drinkType = null;
+        }
+      }
+      if (msg.drink) {
+        Game.addGroundDrink(msg.drink);
+      }
+      break;
+
+    case 'drink_kicked':
+      if (msg.drinkId && typeof msg.x === 'number' && typeof msg.y === 'number') {
+        Game.updateGroundDrink(msg.drinkId, msg.x, msg.y);
+      }
+      break;
   }
 }
 
