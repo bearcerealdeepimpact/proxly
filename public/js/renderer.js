@@ -35,6 +35,7 @@ var camera = null;
 var webglRenderer = null;
 var css2dRenderer = null;
 var players = {};
+var groundDrinks = {};
 var container = null;
 
 function toWorld(x2d, y2d) {
@@ -336,6 +337,46 @@ function updatePlayerDrink(id, hasDrink) {
   }
 }
 
+function addGroundDrink(drinkId, x, y) {
+  if (!drinkId || groundDrinks[drinkId]) {
+    return;
+  }
+
+  var drink = createDrinkMesh();
+  var pos = toWorld(x, y);
+
+  // Position drink on the ground (half the cup height above floor)
+  drink.position.set(pos.x, 0.2, pos.z);
+  scene.add(drink);
+
+  groundDrinks[drinkId] = {
+    mesh: drink
+  };
+}
+
+function removeGroundDrink(drinkId) {
+  var groundDrink = groundDrinks[drinkId];
+  if (!groundDrink) {
+    return;
+  }
+
+  scene.remove(groundDrink.mesh);
+  groundDrink.mesh.geometry.dispose();
+  groundDrink.mesh.material.dispose();
+
+  delete groundDrinks[drinkId];
+}
+
+function updateGroundDrinkPosition(drinkId, x, y) {
+  var groundDrink = groundDrinks[drinkId];
+  if (!groundDrink) {
+    return;
+  }
+
+  var pos = toWorld(x, y);
+  groundDrink.mesh.position.set(pos.x, 0.2, pos.z);
+}
+
 function handleResize() {
   if (!container || !camera || !webglRenderer || !css2dRenderer) {
     return;
@@ -371,6 +412,9 @@ export default {
   removePlayer: removePlayer,
   updatePlayerPosition: updatePlayerPosition,
   updatePlayerDrink: updatePlayerDrink,
+  addGroundDrink: addGroundDrink,
+  removeGroundDrink: removeGroundDrink,
+  updateGroundDrinkPosition: updateGroundDrinkPosition,
   getRenderer: getRenderer,
   handleResize: handleResize
 };
