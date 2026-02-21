@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import SpriteManager from './sprites.js';
 
 var COLORS = {
   LOCAL_PLAYER: '#4488ff',
@@ -211,27 +212,45 @@ function init(containerElement) {
   createClubGeometry();
 }
 
-function addPlayer(id, name, isLocal) {
+function addPlayer(id, name, isLocal, characterId) {
   if (players[id]) {
     return;
   }
 
-  var color;
-  if (isLocal) {
-    color = COLORS.LOCAL_PLAYER;
-  } else {
-    var colorIndex = Math.abs(hashCode(id || '')) % COLORS.REMOTE_COLORS.length;
-    color = COLORS.REMOTE_COLORS[colorIndex];
+  // Default to character 0 if not specified
+  var charId = (characterId !== undefined && characterId !== null) ? characterId : 0;
+
+  // Get the sprite texture for this character
+  var texture = SpriteManager.getCharacterTexture(charId);
+
+  if (!texture) {
+    // Fallback to a placeholder if texture not loaded
+    texture = new THREE.Texture();
   }
 
-  // Player mesh (cylinder)
-  var mat = new THREE.MeshStandardMaterial({ color: color });
-  var geo = new THREE.CylinderGeometry(0.4, 0.4, 1.5, 16);
-  var mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(0, 0.75, 0);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  scene.add(mesh);
+  // Create sprite material with transparency
+  var mat = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    alphaTest: 0.5
+  });
+
+  // Create sprite (billboard - always faces camera)
+  var sprite = new THREE.Sprite(mat);
+  sprite.scale.set(1.6, 1.6, 1); // Scale to match character size (32px sprite = ~1.6 world units)
+  sprite.position.set(0, 0.75, 0); // Position at player height
+  scene.add(sprite);
+
+  // Set initial UV coordinates to show idle frame (column 0) facing south (row 1)
+  var config = SpriteManager.SPRITE_CONFIG;
+  var frameU = config.frameWidth / config.textureWidth;
+  var frameV = config.frameHeight / config.textureHeight;
+
+  // South direction (row 1), idle frame (column 0)
+  var offsetX = 0 * frameU; // column 0
+  var offsetY = 1 * frameV; // row 1 (south)
+
+  texture.offset.set(offsetX, offsetY);
 
   // CSS2D label
   var labelDiv = document.createElement('div');
@@ -245,13 +264,14 @@ function addPlayer(id, name, isLocal) {
 
   var label = new CSS2DObject(labelDiv);
   label.position.set(0, 1.8, 0);
-  mesh.add(label);
+  sprite.add(label);
 
   players[id] = {
-    mesh: mesh,
+    mesh: sprite, // Store sprite as 'mesh' for compatibility
     label: label,
     material: mat,
-    geometry: geo
+    texture: texture,
+    characterId: charId
   };
 }
 
@@ -263,7 +283,8 @@ function removePlayer(id) {
 
   player.mesh.remove(player.label);
   scene.remove(player.mesh);
-  player.geometry.dispose();
+
+  // Dispose of material (textures are managed by SpriteManager, don't dispose them)
   player.material.dispose();
 
   if (player.label.element && player.label.element.parentNode) {
