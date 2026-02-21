@@ -22,15 +22,17 @@
         Game.dropDrink();
       }
 
-      // Zoom with +/- keys
+      if (key === 'm') {
+        Audio.toggleMute();
+      }
+
+      // Volume control with +/- keys
       if (key === '+' || key === '=' || e.key === '+') {
         e.preventDefault();
-        var player = Game.getLocalPlayer();
-        Renderer.setZoom(Renderer.getZoom() + ZOOM_STEP, player.x, player.y);
-      } else if (key === '-' || e.key === '-') {
+        Audio.increaseVolume();
+      } else if (key === '-' || key === '_' || e.key === '-') {
         e.preventDefault();
-        var player = Game.getLocalPlayer();
-        Renderer.setZoom(Renderer.getZoom() - ZOOM_STEP, player.x, player.y);
+        Audio.decreaseVolume();
       }
     });
 

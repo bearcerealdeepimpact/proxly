@@ -14,6 +14,8 @@
   var ambientAudio = null;
   var ambientVolume = 0.25;
   var nextTrackPreloaded = false;
+  var isMuted = false;
+  var volumeBeforeMute = 50;
 
   function init() {
     if (audio) {
@@ -258,6 +260,52 @@
     }
   }
 
+  function increaseVolume() {
+    if (!audio) {
+      init();
+    }
+
+    var volumeSlider = document.getElementById('volumeSlider');
+    if (volumeSlider) {
+      var currentVolume = parseInt(volumeSlider.value, 10);
+      var newVolume = Math.min(100, currentVolume + 5);
+      setVolume(newVolume);
+    }
+  }
+
+  function decreaseVolume() {
+    if (!audio) {
+      init();
+    }
+
+    var volumeSlider = document.getElementById('volumeSlider');
+    if (volumeSlider) {
+      var currentVolume = parseInt(volumeSlider.value, 10);
+      var newVolume = Math.max(0, currentVolume - 5);
+      setVolume(newVolume);
+    }
+  }
+
+  function toggleMute() {
+    if (!audio) {
+      init();
+    }
+
+    var volumeSlider = document.getElementById('volumeSlider');
+    if (!volumeSlider) {
+      return;
+    }
+
+    if (isMuted) {
+      setVolume(volumeBeforeMute);
+      isMuted = false;
+    } else {
+      volumeBeforeMute = parseInt(volumeSlider.value, 10);
+      setVolume(0);
+      isMuted = true;
+    }
+  }
+
   function updateNowPlayingUI() {
     var nowPlayingEl = document.getElementById('nowPlaying');
     var trackTitleEl = document.querySelector('.track-title');
@@ -345,6 +393,9 @@
     handleMusicState: handleMusicState,
     handleMusicSync: handleMusicSync,
     updateNowPlayingUI: updateNowPlayingUI,
-    setVolume: setVolume
+    setVolume: setVolume,
+    increaseVolume: increaseVolume,
+    decreaseVolume: decreaseVolume,
+    toggleMute: toggleMute
   };
 })();
