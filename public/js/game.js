@@ -19,6 +19,7 @@ var localPlayer = {
 };
 
 var remotePlayers = new Map();
+var groundDrinks = new Map();
 
 function addPlayer(player) {
   if (!player || !player.id) {
@@ -66,13 +67,41 @@ function getAllPlayers() {
   return players;
 }
 
+function addGroundDrink(drink) {
+  if (!drink || !drink.id) {
+    return;
+  }
+  groundDrinks.set(drink.id, {
+    id: drink.id,
+    x: drink.x || 0,
+    y: drink.y || 0,
+    drinkType: drink.drinkType || null
+  });
+}
+
+function removeGroundDrink(id) {
+  groundDrinks.delete(id);
+}
+
+function updateGroundDrink(id, x, y) {
+  var drink = groundDrinks.get(id);
+  if (drink) {
+    drink.x = x;
+    drink.y = y;
+  }
+}
+
 export default {
   CONSTANTS: CONSTANTS,
   localPlayer: localPlayer,
   remotePlayers: remotePlayers,
+  groundDrinks: groundDrinks,
   addPlayer: addPlayer,
   removePlayer: removePlayer,
   updatePlayerPosition: updatePlayerPosition,
   getLocalPlayer: getLocalPlayer,
-  getAllPlayers: getAllPlayers
+  getAllPlayers: getAllPlayers,
+  addGroundDrink: addGroundDrink,
+  removeGroundDrink: removeGroundDrink,
+  updateGroundDrink: updateGroundDrink
 };
