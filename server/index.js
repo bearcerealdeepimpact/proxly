@@ -73,10 +73,13 @@ wss.on('connection', (ws) => {
         }
       });
 
+      const drinks = Array.from(groundDrinks.values());
+
       ws.send(JSON.stringify({
         type: 'welcome',
         id: playerId,
         players: existingPlayers,
+        drinks: drinks,
       }));
 
       broadcastToOthers(ws, {
