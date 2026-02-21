@@ -117,6 +117,7 @@
 
   function render() {
     Renderer.render();
+    Audio.updateNowPlayingUI();
   }
 
   document.addEventListener('DOMContentLoaded', init);
