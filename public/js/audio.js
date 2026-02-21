@@ -2,7 +2,10 @@
   'use strict';
 
   var audio = null;
+  var audioAlt = null;
+  var currentAudio = null;
   var currentTrack = null;
+  var nextTrack = null;
   var serverTimeOffset = 0;
   var trackStartTime = 0;
   var trackDuration = 0;
@@ -10,6 +13,7 @@
   var pendingTrack = null;
   var ambientAudio = null;
   var ambientVolume = 0.25;
+  var nextTrackPreloaded = false;
 
   function init() {
     if (audio) {
@@ -18,13 +22,33 @@
     audio = new Audio();
     audio.preload = 'auto';
 
-    audio.onerror = function () {
-      currentTrack = null;
-    };
+    audioAlt = new Audio();
+    audioAlt.preload = 'auto';
 
-    audio.onended = function () {
-      currentTrack = null;
-    };
+    currentAudio = audio;
+
+    function setupAudioHandlers(audioElement) {
+      audioElement.onerror = function () {
+        if (currentAudio === audioElement) {
+          currentTrack = null;
+        }
+      };
+
+      audioElement.onended = function () {
+        if (currentAudio === audioElement) {
+          handleTrackTransition();
+        }
+      };
+
+      audioElement.ontimeupdate = function () {
+        if (currentAudio === audioElement) {
+          handleSeamlessLoop();
+        }
+      };
+    }
+
+    setupAudioHandlers(audio);
+    setupAudioHandlers(audioAlt);
 
     ambientAudio = new Audio();
     ambientAudio.preload = 'auto';
@@ -38,9 +62,11 @@
         var volumeValue = parseInt(savedVolume, 10);
         volumeSlider.value = volumeValue;
         audio.volume = volumeValue / 100;
+        audioAlt.volume = volumeValue / 100;
         ambientAudio.volume = (volumeValue / 100) * ambientVolume;
       } else {
         audio.volume = volumeSlider.value / 100;
+        audioAlt.volume = volumeSlider.value / 100;
         ambientAudio.volume = (volumeSlider.value / 100) * ambientVolume;
       }
 
@@ -122,10 +148,13 @@
       }
     }
 
-    currentTrack = trackInfo;
-    audio.src = trackInfo.url;
+    nextTrackPreloaded = false;
+    nextTrack = null;
 
-    var playPromise = audio.play();
+    currentTrack = trackInfo;
+    currentAudio.src = trackInfo.url;
+
+    var playPromise = currentAudio.play();
     if (playPromise !== undefined) {
       playPromise.catch(function (error) {
         currentTrack = null;
@@ -138,7 +167,7 @@
   }
 
   function getAudioElement() {
-    return audio;
+    return currentAudio;
   }
 
   function calculatePlaybackPosition() {
@@ -159,7 +188,7 @@
     trackStartTime = newTrackStartTime;
     trackDuration = newTrackDuration || 0;
 
-    if (!audio || !currentTrack) {
+    if (!currentAudio || !currentTrack) {
       return;
     }
 
@@ -168,11 +197,11 @@
       return;
     }
 
-    var currentPosition = audio.currentTime;
+    var currentPosition = currentAudio.currentTime;
     var drift = Math.abs(targetPosition - currentPosition);
 
     if (drift > 0.5) {
-      audio.currentTime = targetPosition;
+      currentAudio.currentTime = targetPosition;
     }
   }
 
@@ -215,6 +244,9 @@
 
     var volumeValue = Math.min(100, Math.max(0, value));
     audio.volume = volumeValue / 100;
+    if (audioAlt) {
+      audioAlt.volume = volumeValue / 100;
+    }
     if (ambientAudio) {
       ambientAudio.volume = (volumeValue / 100) * ambientVolume;
     }
@@ -256,6 +288,51 @@
       var percentage = Math.min(100, Math.max(0, (position / trackDuration) * 100));
       progressBarEl.style.width = percentage + '%';
     }
+  }
+
+  function handleSeamlessLoop() {
+    if (!currentAudio || !currentTrack) {
+      return;
+    }
+
+    var timeRemaining = currentAudio.duration - currentAudio.currentTime;
+
+    if (timeRemaining < 3 && !nextTrackPreloaded && currentTrack) {
+      preloadNextTrack();
+    }
+  }
+
+  function preloadNextTrack() {
+    if (nextTrackPreloaded || !currentTrack) {
+      return;
+    }
+
+    nextTrackPreloaded = true;
+    nextTrack = currentTrack;
+
+    var nextAudio = (currentAudio === audio) ? audioAlt : audio;
+    nextAudio.src = currentTrack.url;
+    nextAudio.load();
+  }
+
+  function handleTrackTransition() {
+    if (!nextTrack || !nextTrackPreloaded) {
+      currentTrack = null;
+      return;
+    }
+
+    var nextAudio = (currentAudio === audio) ? audioAlt : audio;
+    currentAudio = nextAudio;
+
+    var playPromise = currentAudio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(function (error) {
+        currentTrack = null;
+      });
+    }
+
+    nextTrackPreloaded = false;
+    nextTrack = null;
   }
 
   window.Audio = {
