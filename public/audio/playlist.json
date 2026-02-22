@@ -1,40 +1,40 @@
 {
   "tracks": [
     {
-      "title": "Electric Dreams",
-      "artist": "Neon Skyline",
+      "title": "Telling Me",
+      "artist": "RXL",
       "filename": "electric-dreams.mp3",
-      "duration": 203
+      "duration": 384
     },
     {
-      "title": "Midnight Groove",
-      "artist": "The Funkateers",
+      "title": "Telling Me",
+      "artist": "RXL",
       "filename": "midnight-groove.mp3",
-      "duration": 185
+      "duration": 384
     },
     {
-      "title": "Cosmic Voyage",
-      "artist": "Stellar Collective",
+      "title": "Telling Me",
+      "artist": "RXL",
       "filename": "cosmic-voyage.mp3",
-      "duration": 247
+      "duration": 384
     },
     {
-      "title": "Urban Pulse",
-      "artist": "City Rhythms",
+      "title": "Telling Me",
+      "artist": "RXL",
       "filename": "urban-pulse.mp3",
-      "duration": 192
+      "duration": 384
     },
     {
-      "title": "Sunset Boulevard",
-      "artist": "LA Soundwaves",
+      "title": "Telling Me",
+      "artist": "RXL",
       "filename": "sunset-boulevard.mp3",
-      "duration": 218
+      "duration": 384
     },
     {
-      "title": "Digital Horizons",
-      "artist": "Synthwave Alliance",
+      "title": "Telling Me",
+      "artist": "RXL",
       "filename": "digital-horizons.mp3",
-      "duration": 234
+      "duration": 384
     }
   ]
 }

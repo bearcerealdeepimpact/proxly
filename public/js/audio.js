@@ -346,14 +346,7 @@
     var progressBarEl = document.querySelector('.progress-bar');
 
     if (!currentTrack) {
-      if (nowPlayingEl) {
-        nowPlayingEl.style.display = 'none';
-      }
       return;
-    }
-
-    if (nowPlayingEl) {
-      nowPlayingEl.style.display = 'block';
     }
 
     if (trackTitleEl) {

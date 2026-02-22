@@ -21,14 +21,8 @@ app.get('/health', (req, res) => {
 const players = new Map();
 const groundDrinks = new Map(); // id -> { id, x, y, vx, vy, color, fadeTimer }
 
-const playlist = [
-  { title: 'Electric Dreams', artist: 'Neon Skyline', filename: 'electric-dreams.mp3', duration: 203 },
-  { title: 'Midnight Groove', artist: 'The Funkateers', filename: 'midnight-groove.mp3', duration: 185 },
-  { title: 'Cosmic Voyage', artist: 'Stellar Collective', filename: 'cosmic-voyage.mp3', duration: 247 },
-  { title: 'Urban Pulse', artist: 'City Rhythms', filename: 'urban-pulse.mp3', duration: 192 },
-  { title: 'Sunset Boulevard', artist: 'LA Soundwaves', filename: 'sunset-boulevard.mp3', duration: 218 },
-  { title: 'Digital Horizons', artist: 'Synthwave Alliance', filename: 'digital-horizons.mp3', duration: 234 },
-];
+const playlistJson = require(path.join(__dirname, '..', 'public', 'audio', 'playlist.json'));
+const playlist = playlistJson.tracks;
 
 const musicState = {
   currentTrackIndex: 0,
