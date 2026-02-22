@@ -68,11 +68,11 @@
         volumeSlider.value = volumeValue;
         audio.volume = volumeValue / 100;
         audioAlt.volume = volumeValue / 100;
-        ambientAudio.volume = (volumeValue / 100) * ambientVolume;
+        if (ambientAudio) ambientAudio.volume = (volumeValue / 100) * ambientVolume;
       } else {
         audio.volume = volumeSlider.value / 100;
         audioAlt.volume = volumeSlider.value / 100;
-        ambientAudio.volume = (volumeSlider.value / 100) * ambientVolume;
+        if (ambientAudio) ambientAudio.volume = (volumeSlider.value / 100) * ambientVolume;
       }
 
       volumeSlider.addEventListener('input', function () {
