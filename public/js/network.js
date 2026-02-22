@@ -133,6 +133,11 @@
       case 'music_sync':
         MusicPlayer.handleMusicSync(msg);
         break;
+
+      case 'track_changed':
+        msg.serverTime = Date.now();
+        MusicPlayer.handleMusicState(msg);
+        break;
     }
   }
 
