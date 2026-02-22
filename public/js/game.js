@@ -167,8 +167,8 @@
 
   function isNearBar() {
     if (currentRoom !== 'main') return false;
-    var barCX = 60 + 180 / 2;
-    var barFrontY = 460 + 30;
+    var barCX = 30 + 200 / 2;
+    var barFrontY = 420 + 30;
     var dx = localPlayer.x - barCX;
     var dy = localPlayer.y - barFrontY;
     return Math.sqrt(dx * dx + dy * dy) < CONSTANTS.BAR_INTERACT_DIST;
@@ -278,7 +278,7 @@
     { members: [8, 9],    cx: 500, cy: 260, relocateTimer: 0 }
   ];
 
-  var DJ_X = 400;
+  var DJ_X = 350;
   var DJ_Y = 35;
 
   var crowdNPCs = [];
