@@ -2471,6 +2471,68 @@
     drawSubRoomFrontWalls('#4a3828', '#3a2818', darkenColor('#3a2818', 0.7));
   }
 
+  function drawVIPRoom() {
+    // 1. Deep purple floor
+    drawSubRoomFloor('#1a0a28');
+
+    // 2. Velvet purple walls (back + left)
+    drawSubRoomWalls('#3a1a4a', '#2a1038', darkenColor('#2a1038', 0.7));
+
+    // 3. Neon sign rectangles at social_link interactable positions
+    var neonSigns = [
+      { x: 100, y: 80, w: 50, h: 14, color: '#ff00ff' },
+      { x: 250, y: 80, w: 50, h: 14, color: '#00ffff' },
+      { x: 400, y: 80, w: 50, h: 14, color: '#ff4488' }
+    ];
+    var neonPulse = 0.6 + 0.4 * Math.sin(animTime / 400);
+    for (var i = 0; i < neonSigns.length; i++) {
+      var sign = neonSigns[i];
+      var signCenter = worldToScreen(sign.x + sign.w / 2, sign.y + sign.h / 2);
+      var signElev = 28 * HEIGHT_SCALE;
+      // Neon glow
+      ctx.save();
+      ctx.globalAlpha = neonPulse * 0.5;
+      ctx.fillStyle = sign.color;
+      ctx.shadowColor = sign.color;
+      ctx.shadowBlur = 18 * TILE_SCALE;
+      var nw = sign.w * TILE_SCALE * 0.6;
+      var nh = sign.h * TILE_SCALE * 0.4;
+      ctx.fillRect(signCenter.x - nw / 2, signCenter.y - signElev - nh / 2, nw, nh);
+      ctx.restore();
+      // Solid neon rectangle
+      ctx.save();
+      ctx.globalAlpha = neonPulse;
+      ctx.strokeStyle = sign.color;
+      ctx.lineWidth = 2;
+      ctx.shadowColor = sign.color;
+      ctx.shadowBlur = 10 * TILE_SCALE;
+      ctx.strokeRect(signCenter.x - nw / 2, signCenter.y - signElev - nh / 2, nw, nh);
+      ctx.restore();
+    }
+
+    // 4. Plush seating blocks (low wide dark purple)
+    drawRaisedBlockGradient(60, 180, 100, 35, 8, '#2a1040', '#220c38', '#1a0828');
+    drawRaisedBlockGradient(350, 180, 100, 35, 8, '#2a1040', '#220c38', '#1a0828');
+    drawRaisedBlockGradient(60, 280, 100, 35, 8, '#281040', '#200c36', '#180826');
+    drawRaisedBlockGradient(350, 280, 100, 35, 8, '#281040', '#200c36', '#180826');
+
+    // 5. Guest book table (small raised block)
+    drawRaisedBlockGradient(220, 240, 60, 40, 16, '#3a1a4a', '#2a1038', '#1a0828');
+
+    // 6. Purple ambient glow radial gradient
+    var center = worldToScreen(250, 200);
+    var glowRadius = 220 * TILE_SCALE;
+    var glowGrad = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, glowRadius);
+    glowGrad.addColorStop(0, 'rgba(120,40,180,0.14)');
+    glowGrad.addColorStop(0.5, 'rgba(100,20,160,0.06)');
+    glowGrad.addColorStop(1, 'rgba(80,10,140,0)');
+    ctx.fillStyle = glowGrad;
+    ctx.fillRect(center.x - glowRadius, center.y - glowRadius, glowRadius * 2, glowRadius * 2);
+
+    // Front walls (right + bottom)
+    drawSubRoomFrontWalls('#3a1a4a', '#2a1038', darkenColor('#2a1038', 0.7));
+  }
+
   function drawDoors() {
     if (typeof Rooms === 'undefined' || !Rooms.getRoomDoors || !Game.currentRoom) {
       return;
