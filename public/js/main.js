@@ -60,8 +60,16 @@
     // Show instructions briefly
     Input.showInstructions();
 
+    // Show chat panel
+    if (window.Chat && Chat.show) {
+      Chat.show();
+    }
+
     // Start game loop
     Game.localPlayer.name = 'You';
+    if (window.Network && Network.connect) {
+      Network.connect();
+    }
     running = true;
     lastTimestamp = 0;
     requestAnimationFrame(gameLoop);
@@ -124,6 +132,11 @@
 
     player.x = newX;
     player.y = newY;
+
+    // Send position to server
+    if (window.Network && Network.sendMove) {
+      Network.sendMove(player.x, player.y);
+    }
 
     // Kick ground drinks
     Game.kickNearbyDrink(player.x, player.y);

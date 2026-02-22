@@ -2,7 +2,7 @@
   'use strict';
 
   var keys = {};
-  var MOVE_KEYS = ['w', 'a', 's', 'd'];
+  var MOVE_KEYS = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
   var ZOOM_STEP = 0.1;
 
   // Mobile touch joystick state
@@ -188,11 +188,16 @@
     var dx = 0;
     var dy = 0;
 
-    // Keyboard WASD (isometric remapping)
-    if (keys['w']) { dx -= 1; dy -= 1; }
-    if (keys['s']) { dx += 1; dy += 1; }
-    if (keys['a']) { dx -= 1; dy += 1; }
-    if (keys['d']) { dx += 1; dy -= 1; }
+    // Block movement when chat input is focused
+    if (window.Chat && Chat.isChatFocused()) {
+      return { dx: 0, dy: 0 };
+    }
+
+    // Keyboard WASD / Arrow keys (isometric remapping)
+    if (keys['w'] || keys['arrowup'])    { dx -= 1; dy -= 1; }
+    if (keys['s'] || keys['arrowdown'])  { dx += 1; dy += 1; }
+    if (keys['a'] || keys['arrowleft'])  { dx -= 1; dy += 1; }
+    if (keys['d'] || keys['arrowright']) { dx += 1; dy -= 1; }
 
     // Touch joystick (convert screen to isometric world)
     if (touchActive && (Math.abs(touchDx) > 0.01 || Math.abs(touchDy) > 0.01)) {

@@ -21,16 +21,18 @@
   };
 
   var localPlayer = {
-    id: 'local',
+    id: null,
     name: 'You',
     x: CONSTANTS.SPAWN_X,
     y: CONSTANTS.SPAWN_Y,
+    characterId: Math.floor(Math.random() * 6),
     drinkState: 'none',
     drinkTimer: 0,
     drinkOrderTimer: 0,
     drinkColor: null
   };
 
+  var remotePlayers = new Map();
   var groundDrinks = [];
   var currentRoom = 'main';
   var transitioning = false;
@@ -83,8 +85,14 @@
     localPlayer.x = spawnX || room.spawnX;
     localPlayer.y = spawnY || room.spawnY;
 
-    // Clear ground drinks
+    // Clear ground drinks and remote players for room transition
     groundDrinks.length = 0;
+    remotePlayers.clear();
+
+    // Notify server of room change
+    if (window.Network && Network.sendRoomChange) {
+      Network.sendRoomChange(roomId, localPlayer.x, localPlayer.y);
+    }
 
     // Re-init crowd if entering main
     if (roomId === 'main') {
@@ -130,7 +138,7 @@
   }
 
   function getAllPlayers() {
-    return [localPlayer];
+    return [localPlayer].concat(Array.from(remotePlayers.values()));
   }
 
   function generateId() {
@@ -172,6 +180,9 @@
     localPlayer.drinkState = 'ordering';
     localPlayer.drinkOrderTimer = CONSTANTS.DRINK_ORDER_TIME;
     localPlayer.drinkColor = DRINK_COLORS[Math.floor(Math.random() * DRINK_COLORS.length)];
+    if (window.Network && Network.sendDrinkOrder) {
+      Network.sendDrinkOrder(localPlayer.drinkColor);
+    }
   }
 
   function dropDrink() {
@@ -192,6 +203,9 @@
     localPlayer.drinkState = 'none';
     localPlayer.drinkTimer = 0;
     localPlayer.drinkColor = null;
+    if (window.Network && Network.sendDrinkDrop) {
+      Network.sendDrinkDrop(localPlayer.x, localPlayer.y, color, drinkId);
+    }
   }
 
   function updateDrinkSystem(dt) {
@@ -200,6 +214,9 @@
       if (localPlayer.drinkOrderTimer <= 0) {
         localPlayer.drinkState = 'carrying';
         localPlayer.drinkTimer = CONSTANTS.DRINK_CARRY_TIME;
+        if (window.Network && Network.sendDrinkCarry) {
+          Network.sendDrinkCarry();
+        }
       }
     }
 
@@ -240,6 +257,9 @@
       if (dist < 8 && dist > 0.1) {
         drink.vx = (dx / dist) * CONSTANTS.DRINK_KICK_SPEED;
         drink.vy = (dy / dist) * CONSTANTS.DRINK_KICK_SPEED;
+        if (window.Network && Network.sendDrinkKick) {
+          Network.sendDrinkKick(drink.id, drink.vx, drink.vy);
+        }
       }
     }
   }
@@ -467,6 +487,69 @@
     }
   }
 
+  // ─── Multiplayer functions ────────────────────────────────────────
+
+  function addPlayer(player) {
+    if (!player || player.id === localPlayer.id) return;
+    remotePlayers.set(player.id, {
+      id: player.id,
+      name: player.name || 'Anon',
+      x: player.x || 0,
+      y: player.y || 0,
+      characterId: player.characterId || 0,
+      drinkState: player.drinkState || 'none',
+      drinkColor: player.drinkColor || null
+    });
+  }
+
+  function removePlayer(id) {
+    remotePlayers.delete(id);
+  }
+
+  function updatePlayerPosition(id, x, y) {
+    var p = remotePlayers.get(id);
+    if (p) {
+      p.x = x;
+      p.y = y;
+    }
+  }
+
+  function updateRemotePlayerDrink(id, state, color) {
+    var p = remotePlayers.get(id);
+    if (p) {
+      p.drinkState = state;
+      p.drinkColor = color;
+    }
+  }
+
+  function updateGroundDrinkVelocity(drinkId, vx, vy) {
+    for (var i = 0; i < groundDrinks.length; i++) {
+      if (groundDrinks[i].id === drinkId) {
+        groundDrinks[i].vx = vx;
+        groundDrinks[i].vy = vy;
+        break;
+      }
+    }
+  }
+
+  function setRoomPlayers(list) {
+    remotePlayers.clear();
+    if (list) {
+      for (var i = 0; i < list.length; i++) {
+        addPlayer(list[i]);
+      }
+    }
+  }
+
+  function replaceGroundDrinks(list) {
+    groundDrinks.length = 0;
+    if (list) {
+      for (var i = 0; i < list.length; i++) {
+        addGroundDrink(list[i]);
+      }
+    }
+  }
+
   initCrowd();
 
   window.Game = {
@@ -489,6 +572,13 @@
     get transitioning() { return transitioning; },
     get transitionAlpha() { return transitionAlpha; },
     get transitionPhase() { return transitionPhase; },
-    switchRoom: switchRoom
+    switchRoom: switchRoom,
+    addPlayer: addPlayer,
+    removePlayer: removePlayer,
+    updatePlayerPosition: updatePlayerPosition,
+    updateRemotePlayerDrink: updateRemotePlayerDrink,
+    updateGroundDrinkVelocity: updateGroundDrinkVelocity,
+    setRoomPlayers: setRoomPlayers,
+    replaceGroundDrinks: replaceGroundDrinks
   };
 })();
