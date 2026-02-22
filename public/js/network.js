@@ -127,11 +127,11 @@
         break;
 
       case 'music_state':
-        Audio.handleMusicState(msg);
+        AudioManager.handleMusicState(msg);
         break;
 
       case 'music_sync':
-        Audio.handleMusicSync(msg);
+        AudioManager.handleMusicSync(msg);
         break;
     }
   }

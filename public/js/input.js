@@ -23,16 +23,16 @@
       }
 
       if (key === 'm') {
-        Audio.toggleMute();
+        AudioManager.toggleMute();
       }
 
       // Volume control with +/- keys
       if (key === '+' || key === '=' || e.key === '+') {
         e.preventDefault();
-        Audio.increaseVolume();
+        AudioManager.increaseVolume();
       } else if (key === '-' || key === '_' || e.key === '-') {
         e.preventDefault();
-        Audio.decreaseVolume();
+        AudioManager.decreaseVolume();
       }
     });
 
