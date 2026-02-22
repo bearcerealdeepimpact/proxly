@@ -606,7 +606,7 @@
       self.transitioning = true;
       self.transitionAlpha = 0;
       var fadeIn = setInterval(function () {
-        self.transitionAlpha += 0.05;
+        self.transitionAlpha += 0.15;
         if (self.transitionAlpha >= 1) {
           self.transitionAlpha = 1;
           clearInterval(fadeIn);
@@ -626,7 +626,7 @@
           }
           // Fade out
           var fadeOut = setInterval(function () {
-            self.transitionAlpha -= 0.05;
+            self.transitionAlpha -= 0.15;
             if (self.transitionAlpha <= 0) {
               self.transitionAlpha = 0;
               self.transitioning = false;
