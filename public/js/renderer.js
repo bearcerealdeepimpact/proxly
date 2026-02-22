@@ -2811,6 +2811,17 @@
     playerMoveTime = {};
   }
 
+  function drawTransitionOverlay() {
+    if (!window.Game || !window.Game.transitioning) return;
+    var alpha = window.Game.transitionAlpha || 0;
+    if (alpha <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  }
+
   window.Renderer = {
     init: init,
     render: render,
@@ -2819,6 +2830,7 @@
     setZoom: setZoom,
     getZoom: getZoom,
     onRoomChange: onRoomChange,
-    drawMinimap: drawMinimap
+    drawMinimap: drawMinimap,
+    drawTransitionOverlay: drawTransitionOverlay
   };
 })();
