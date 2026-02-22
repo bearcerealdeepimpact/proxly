@@ -26,7 +26,7 @@
     Renderer.init(canvas);
     Input.init(canvas);
     try {
-      AudioManager.init();
+      MusicPlayer.init();
     } catch (e) {
       // Audio init may fail but should not block game
     }
@@ -121,7 +121,7 @@
 
   function render() {
     Renderer.render();
-    AudioManager.updateNowPlayingUI();
+    MusicPlayer.updateNowPlayingUI();
   }
 
   document.addEventListener('DOMContentLoaded', init);

@@ -127,11 +127,16 @@
         break;
 
       case 'music_state':
-        AudioManager.handleMusicState(msg);
+        MusicPlayer.handleMusicState(msg);
         break;
 
       case 'music_sync':
-        AudioManager.handleMusicSync(msg);
+        MusicPlayer.handleMusicSync(msg);
+        break;
+
+      case 'track_changed':
+        msg.serverTime = Date.now();
+        MusicPlayer.handleMusicState(msg);
         break;
     }
   }
