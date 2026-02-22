@@ -2280,6 +2280,42 @@
     return drawables;
   }
 
+  function drawSubRoomFloor(floorColor) {
+    var C = Game.CONSTANTS;
+    var points = worldRectToIsoDiamond(0, 0, C.WORLD_WIDTH, C.WORLD_HEIGHT);
+
+    // Clip to diamond and fill with solid color
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (var i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.closePath();
+    ctx.clip();
+
+    ctx.fillStyle = floorColor;
+
+    // Fill bounding box of diamond
+    var bx = Math.min(points[0].x, points[1].x, points[2].x, points[3].x);
+    var by = Math.min(points[0].y, points[1].y, points[2].y, points[3].y);
+    var bx2 = Math.max(points[0].x, points[1].x, points[2].x, points[3].x);
+    var by2 = Math.max(points[0].y, points[1].y, points[2].y, points[3].y);
+    ctx.fillRect(bx, by, bx2 - bx, by2 - by);
+    ctx.restore();
+
+    // Floor outline
+    ctx.strokeStyle = darkenColor(floorColor, 0.6);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (var j = 1; j < points.length; j++) {
+      ctx.lineTo(points[j].x, points[j].y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  }
+
   function render() {
     if (!ctx) {
       return;
