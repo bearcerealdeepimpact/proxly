@@ -2735,48 +2735,142 @@
       return;
     }
 
-    var pulseAlpha = 0.4 + 0.3 * Math.sin(animTime / 500);
+    var pulse = 0.5 + 0.5 * Math.sin(animTime / 600);
+    var slowPulse = 0.5 + 0.5 * Math.sin(animTime / 1200);
 
     for (var i = 0; i < doors.length; i++) {
       var door = doors[i];
-      var pts = worldRectToIsoDiamond(door.x, door.y, door.w, door.h);
+      var hex = door.color || '#FFD700';
+      var r = parseInt(hex.slice(1, 3), 16);
+      var g = parseInt(hex.slice(3, 5), 16);
+      var b = parseInt(hex.slice(5, 7), 16);
 
-      // Draw glowing door frame
+      // Center of door in screen coords
+      var cx = door.x + door.w / 2;
+      var cy = door.y + door.h / 2;
+      var sc = worldToScreen(cx, cy);
+
+      // Floor ellipse dimensions (isometric perspective)
+      var floorRx = (door.w * 0.6) * TILE_SCALE;
+      var floorRy = floorRx * 0.4;
+
+      // Beam height
+      var beamH = 70 * TILE_SCALE;
+      var beamTopY = sc.y - beamH;
+
+      // ── 1. Floor glow pool ──
       ctx.save();
-      ctx.globalAlpha = pulseAlpha;
-      ctx.strokeStyle = door.color || '#44ccff';
-      ctx.lineWidth = 3;
-      ctx.shadowColor = door.color || '#44ccff';
-      ctx.shadowBlur = 12;
-
+      var floorGrad = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, floorRx * 1.5);
+      floorGrad.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',' + (0.15 + pulse * 0.08) + ')');
+      floorGrad.addColorStop(0.6, 'rgba(' + r + ',' + g + ',' + b + ',' + (0.06 + pulse * 0.03) + ')');
+      floorGrad.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',0)');
+      ctx.fillStyle = floorGrad;
       ctx.beginPath();
-      ctx.moveTo(pts[0].x, pts[0].y);
-      for (var j = 1; j < pts.length; j++) {
-        ctx.lineTo(pts[j].x, pts[j].y);
-      }
-      ctx.closePath();
-      ctx.stroke();
-
-      // Fill with subtle tint
-      ctx.globalAlpha = pulseAlpha * 0.2;
-      ctx.fillStyle = door.color || '#44ccff';
+      ctx.ellipse(sc.x, sc.y, floorRx * 1.5, floorRy * 1.5, 0, 0, Math.PI * 2);
       ctx.fill();
-
       ctx.restore();
 
-      // Label text above the frame
+      // ── 2. Light beam (tapered trapezoid) ──
+      ctx.save();
+      var beamTopW = floorRx * (0.25 + slowPulse * 0.1);
+      var beamBotW = floorRx * 0.9;
+
+      // Main beam gradient (vertical)
+      var beamGrad = ctx.createLinearGradient(sc.x, beamTopY, sc.x, sc.y);
+      beamGrad.addColorStop(0, 'rgba(' + r + ',' + g + ',' + b + ',' + (0.02 + pulse * 0.02) + ')');
+      beamGrad.addColorStop(0.3, 'rgba(' + r + ',' + g + ',' + b + ',' + (0.08 + pulse * 0.05) + ')');
+      beamGrad.addColorStop(0.7, 'rgba(' + r + ',' + g + ',' + b + ',' + (0.12 + pulse * 0.06) + ')');
+      beamGrad.addColorStop(1, 'rgba(' + r + ',' + g + ',' + b + ',' + (0.04 + pulse * 0.02) + ')');
+      ctx.fillStyle = beamGrad;
+
+      ctx.beginPath();
+      ctx.moveTo(sc.x - beamTopW, beamTopY);
+      ctx.lineTo(sc.x + beamTopW, beamTopY);
+      ctx.lineTo(sc.x + beamBotW, sc.y);
+      ctx.lineTo(sc.x - beamBotW, sc.y);
+      ctx.closePath();
+      ctx.fill();
+
+      // Bright core line
+      ctx.globalAlpha = 0.06 + pulse * 0.04;
+      ctx.strokeStyle = 'rgba(' + Math.min(255, r + 40) + ',' + Math.min(255, g + 40) + ',' + Math.min(255, b + 40) + ',0.3)';
+      ctx.lineWidth = 1.5 * TILE_SCALE;
+      ctx.beginPath();
+      ctx.moveTo(sc.x, beamTopY + 5);
+      ctx.lineTo(sc.x, sc.y - 3);
+      ctx.stroke();
+      ctx.restore();
+
+      // ── 3. Floating particles in beam ──
+      ctx.save();
+      var particleCount = 4;
+      for (var p = 0; p < particleCount; p++) {
+        var seed = (animTime / 2000 + p * 0.25 + i * 1.7) % 1;
+        var py = sc.y - seed * beamH;
+        var drift = Math.sin(animTime / 800 + p * 2.1 + i * 3) * beamTopW * 0.6;
+        var pSize = (1 + Math.sin(seed * Math.PI)) * 1.5 * TILE_SCALE;
+        var pAlpha = Math.sin(seed * Math.PI) * (0.3 + pulse * 0.2);
+
+        ctx.globalAlpha = pAlpha;
+        ctx.fillStyle = 'rgba(' + Math.min(255, r + 60) + ',' + Math.min(255, g + 60) + ',' + Math.min(255, b + 60) + ',1)';
+        ctx.beginPath();
+        ctx.arc(sc.x + drift, py, pSize, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // ── 4. Label floating in the beam ──
       if (door.label) {
-        var centerX = (pts[0].x + pts[1].x + pts[2].x + pts[3].x) / 4;
-        var topY = Math.min(pts[0].y, pts[1].y, pts[2].y, pts[3].y);
+        var labelY = sc.y - beamH * 0.6;
+        var fontSize = Math.round(13 * TILE_SCALE);
+        var labelAlpha = 0.75 + pulse * 0.25;
 
         ctx.save();
-        ctx.globalAlpha = pulseAlpha + 0.2;
-        ctx.font = 'bold 11px monospace';
+        ctx.font = 'bold ' + fontSize + 'px monospace';
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#000000';
-        ctx.fillText(door.label, centerX, topY - 6);
-        ctx.fillStyle = door.color || '#44ccff';
-        ctx.fillText(door.label, centerX, topY - 7);
+
+        // Measure text for background pill
+        var textW = ctx.measureText(door.label).width;
+        var padX = 6 * TILE_SCALE;
+        var padY = 4 * TILE_SCALE;
+        var pillH = fontSize + padY * 2;
+        var pillW = textW + padX * 2;
+        var pillR = 3 * TILE_SCALE;
+        var pillX = sc.x - pillW / 2;
+        var pillY = labelY - fontSize - padY;
+
+        // Dark background pill
+        ctx.globalAlpha = labelAlpha * 0.7;
+        ctx.fillStyle = 'rgba(10,10,20,0.85)';
+        ctx.beginPath();
+        ctx.moveTo(pillX + pillR, pillY);
+        ctx.lineTo(pillX + pillW - pillR, pillY);
+        ctx.quadraticCurveTo(pillX + pillW, pillY, pillX + pillW, pillY + pillR);
+        ctx.lineTo(pillX + pillW, pillY + pillH - pillR);
+        ctx.quadraticCurveTo(pillX + pillW, pillY + pillH, pillX + pillW - pillR, pillY + pillH);
+        ctx.lineTo(pillX + pillR, pillY + pillH);
+        ctx.quadraticCurveTo(pillX, pillY + pillH, pillX, pillY + pillH - pillR);
+        ctx.lineTo(pillX, pillY + pillR);
+        ctx.quadraticCurveTo(pillX, pillY, pillX + pillR, pillY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Colored accent line at bottom of pill
+        ctx.globalAlpha = labelAlpha;
+        ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',0.9)';
+        ctx.fillRect(pillX + pillR, pillY + pillH - 2 * TILE_SCALE, pillW - pillR * 2, 2 * TILE_SCALE);
+
+        // Text with glow
+        ctx.shadowColor = 'rgba(' + r + ',' + g + ',' + b + ',0.9)';
+        ctx.shadowBlur = 10 * TILE_SCALE;
+        ctx.globalAlpha = labelAlpha;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(door.label, sc.x, labelY);
+
+        // Second pass without shadow for crisp text
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(' + Math.min(255, r + 30) + ',' + Math.min(255, g + 30) + ',' + Math.min(255, b + 30) + ',1)';
+        ctx.fillText(door.label, sc.x, labelY);
         ctx.restore();
       }
     }
