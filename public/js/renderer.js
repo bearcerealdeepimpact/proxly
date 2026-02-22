@@ -2645,35 +2645,33 @@
     ctx.fillStyle = '#0d0d0f';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 2. Floor (concrete)
-    drawFloor();
+    var room = Game.currentRoom || 'main';
 
-    // 3. Walls (back + left, concrete gray, no brick)
-    drawWalls();
+    // 2. Room-specific background rendering (floor, walls, environment)
+    if (room === 'main') {
+      // Main club full pipeline
+      drawFloor();
+      drawWalls();
+      drawExposedPipes();
+      drawLEDWall();
+      drawDJBooth();
+      drawDanceFloor();
+      drawLEDWallGlow();
+      drawAtmosphericLights();
+      drawSpeakerStack(LAYOUT.SPEAKER_LEFT.x, LAYOUT.SPEAKER_LEFT.y);
+      drawSpeakerStack(LAYOUT.SPEAKER_RIGHT.x, LAYOUT.SPEAKER_RIGHT.y);
+    } else if (room === 'backstage') {
+      drawBackstageRoom();
+    } else if (room === 'releases') {
+      drawReleasesRoom();
+    } else if (room === 'vip') {
+      drawVIPRoom();
+    }
 
-    // 4. Exposed pipes on back wall
-    drawExposedPipes();
+    // 3. Doors (rendered in all rooms)
+    drawDoors();
 
-    // 5. LED wall behind booth (animated color panels)
-    drawLEDWall();
-
-    // 6. DJ Booth (platform + desk + equipment + LEDs + spotlight)
-    drawDJBooth();
-
-    // 7. Dance floor (expanded, muted)
-    drawDanceFloor();
-
-    // 8. LED wall glow wash onto dance floor
-    drawLEDWallGlow();
-
-    // 9. Atmospheric lights (pulsing red/blue)
-    drawAtmosphericLights();
-
-    // 8. Speaker stacks at booth flanks
-    drawSpeakerStack(LAYOUT.SPEAKER_LEFT.x, LAYOUT.SPEAKER_LEFT.y);
-    drawSpeakerStack(LAYOUT.SPEAKER_RIGHT.x, LAYOUT.SPEAKER_RIGHT.y);
-
-    // 9. Depth-sorted: standing tables, bar, DJ NPC, players
+    // 4. Depth-sorted drawables (tables, bar, DJ, players, etc.)
     var drawables = buildDrawables();
     for (var i = 0; i < drawables.length; i++) {
       var d = drawables[i];
@@ -2692,23 +2690,42 @@
       }
     }
 
-    // 10. Front walls (right + bottom)
-    drawFrontWalls();
+    // 5. Front walls (dispatch by room)
+    if (room === 'main') {
+      drawFrontWalls();
+    } else if (room === 'backstage') {
+      drawSubRoomFrontWalls('#3a3028', '#2a2018', darkenColor('#2a2018', 0.7));
+    } else if (room === 'releases') {
+      drawSubRoomFrontWalls('#4a3828', '#3a2818', darkenColor('#3a2818', 0.7));
+    } else if (room === 'vip') {
+      drawSubRoomFrontWalls('#3a1a4a', '#2a1038', darkenColor('#2a1038', 0.7));
+    }
 
-    // 11. Vignette (heavy)
+    // 6. Vignette (all rooms)
     drawVignette();
 
-    // 11.5. Drink prompts / HUD (after vignette, before strobe)
+    // 7. Drink prompts / HUD (after vignette)
     drawDrinkPrompt();
 
-    // 11.6. Interaction prompts (doors, objects)
+    // 8. Interaction prompts (all rooms)
     drawInteractionPrompt();
 
-    // 12. Strobe (buildup only, screen overlay)
-    drawStrobe();
+    // 9. Strobe (main room only)
+    if (room === 'main') {
+      drawStrobe();
+    }
 
-    // 13. Zoom indicator
+    // 10. Zoom indicator (all rooms)
     drawZoomIndicator();
+
+    // 11. Minimap (all rooms)
+    var minimapRoom = (typeof Rooms !== 'undefined' && Rooms.getRoom) ? Rooms.getRoom(room) : null;
+    var minimapPlayers = Game.getAllPlayers ? Game.getAllPlayers() : {};
+    var minimapLocalId = localPlayer ? localPlayer.id : null;
+    drawMinimap(minimapRoom, minimapPlayers, minimapLocalId);
+
+    // 12. Transition overlay (all rooms)
+    drawTransitionOverlay();
   }
 
   function init(canvasElement) {
