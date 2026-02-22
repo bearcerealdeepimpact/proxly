@@ -2401,6 +2401,42 @@
     }
   }
 
+  function drawInteractionPrompt() {
+    if (typeof Interaction === 'undefined' || !Interaction.getActivePrompt) {
+      return;
+    }
+
+    var prompt = Interaction.getActivePrompt();
+    if (!prompt) {
+      return;
+    }
+
+    var player = Game.localPlayer;
+    if (!player) {
+      return;
+    }
+
+    var screen = worldToScreen(player.x, player.y);
+    var fontSize = Math.max(10, Math.round(12 * zoomLevel));
+    ctx.font = 'bold ' + fontSize + 'px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    var promptY = screen.y - 40 * TILE_SCALE;
+
+    var text = prompt.text || 'Press E';
+    var textW = ctx.measureText(text).width;
+
+    // Background pill
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.beginPath();
+    ctx.roundRect(screen.x - textW / 2 - 6, promptY - fontSize - 4, textW + 12, fontSize + 8, 4);
+    ctx.fill();
+
+    // Prompt text
+    ctx.fillStyle = prompt.color || '#ffffff';
+    ctx.fillText(text, screen.x, promptY);
+  }
+
   function render() {
     if (!ctx) {
       return;
@@ -2475,6 +2511,9 @@
 
     // 11.5. Drink prompts / HUD (after vignette, before strobe)
     drawDrinkPrompt();
+
+    // 11.6. Interaction prompts (doors, objects)
+    drawInteractionPrompt();
 
     // 12. Strobe (buildup only, screen overlay)
     drawStrobe();
