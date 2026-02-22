@@ -58,6 +58,13 @@
     Network.sendJoin(name);
 
     nameOverlay.style.display = 'none';
+
+    try {
+      MusicPlayer.unlockAndPlay();
+    } catch (e) {
+      // Audio play may fail but should not block game
+    }
+
     running = true;
     lastTimestamp = 0;
     requestAnimationFrame(gameLoop);
@@ -93,6 +100,11 @@
 
     // Crowd NPCs move even when player is still
     Game.updateCrowd(deltaTime);
+
+    // Update interaction prompts
+    if (typeof Interaction !== 'undefined' && Interaction.update) {
+      Interaction.update();
+    }
 
     var movement = Input.getMovement();
     if (movement.dx === 0 && movement.dy === 0) {

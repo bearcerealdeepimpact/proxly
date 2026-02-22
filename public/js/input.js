@@ -15,7 +15,11 @@
       keys[key] = true;
 
       if (key === 'e') {
-        Game.tryOrderDrink();
+        if (typeof Interaction !== 'undefined' && Interaction.interact) {
+          Interaction.interact();
+        } else {
+          Game.tryOrderDrink();
+        }
       }
 
       if (key === 'q') {
