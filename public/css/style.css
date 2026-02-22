@@ -565,7 +565,6 @@ canvas {
   border: 1px solid rgba(0,212,255,0.6);
   transition: transform 0.05s ease-out;
 }
-
 .mobile-interact-btn {
   position: fixed;
   bottom: 100px;
