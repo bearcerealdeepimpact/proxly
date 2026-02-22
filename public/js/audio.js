@@ -448,7 +448,7 @@
     }
   }
 
-  window.Audio = {
+  window.AudioManager = {
     init: init,
     playTrack: playTrack,
     getCurrentTrack: getCurrentTrack,

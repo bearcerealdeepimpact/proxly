@@ -25,7 +25,11 @@
 
     Renderer.init(canvas);
     Input.init(canvas);
-    Audio.init();
+    try {
+      AudioManager.init();
+    } catch (e) {
+      // Audio init may fail but should not block game
+    }
     Network.connect();
 
     nameSubmit.addEventListener('click', handleNameSubmit);
@@ -117,7 +121,7 @@
 
   function render() {
     Renderer.render();
-    Audio.updateNowPlayingUI();
+    AudioManager.updateNowPlayingUI();
   }
 
   document.addEventListener('DOMContentLoaded', init);
