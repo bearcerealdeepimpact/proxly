@@ -58,6 +58,13 @@
     Network.sendJoin(name);
 
     nameOverlay.style.display = 'none';
+
+    try {
+      MusicPlayer.unlockAndPlay();
+    } catch (e) {
+      // Audio play may fail but should not block game
+    }
+
     running = true;
     lastTimestamp = 0;
     requestAnimationFrame(gameLoop);
