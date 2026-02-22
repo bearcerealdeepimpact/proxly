@@ -128,8 +128,10 @@
     DJ_DESK_W: 120,
     DJ_DESK_H: 30,
     DJ_DESK_ELEVATION: 5,
-    SPEAKER_LEFT: { x: 210, y: 20 },
-    SPEAKER_RIGHT: { x: 590, y: 20 },
+    PA_LEFT_X: 165,
+    PA_LEFT_Y: 14,
+    PA_RIGHT_X: 587,
+    PA_RIGHT_Y: 14,
     DANCE_FLOOR_X: 100,
     DANCE_FLOOR_Y: 120,
     DANCE_FLOOR_W: 600,
@@ -517,8 +519,8 @@
     );
     var glowR = Math.max(bx2 - bx, by2 - by) * 0.6;
     var glow = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, glowR);
-    glow.addColorStop(0, 'rgba(180,140,40,0.10)');
-    glow.addColorStop(1, 'rgba(180,140,40,0)');
+    glow.addColorStop(0, 'rgba(100,40,120,0.12)');
+    glow.addColorStop(1, 'rgba(100,40,120,0)');
     ctx.fillStyle = glow;
     ctx.fillRect(bx, by, bx2 - bx, by2 - by);
 
@@ -634,9 +636,9 @@
         fadeIn = Math.max(0, fadeIn);
         var breathe = 0.4 + Math.sin(t * 1.2 + col * 0.4) * 0.3;
         var bright = fadeIn * breathe;
-        r = Math.round(255 * bright);
-        g = Math.round(200 * bright);
-        b = Math.round(80 * bright);
+        r = Math.round(140 * bright);
+        g = Math.round(180 * bright);
+        b = Math.round(255 * bright);
         a = 1;
         break;
 
@@ -644,11 +646,11 @@
         // Slow sweeping white/cyan waves, minimal, atmospheric
         var wave = Math.sin(t * 0.8 + colN * Math.PI * 2 - rowN * 1.5);
         var intensity = 0.15 + Math.max(0, wave) * 0.6;
-        // Color shifts between warm white and gold
-        var goldShift = 0.5 + Math.sin(t * 0.3) * 0.5;
-        r = Math.round(255 * intensity);
-        g = Math.round(230 * intensity * (1 - goldShift * 0.3));
-        b = Math.round(180 * intensity * (1 - goldShift * 0.5));
+        // Color shifts between white and light blue
+        var blueShift = 0.5 + Math.sin(t * 0.3) * 0.5;
+        r = Math.round(255 * intensity * (1 - blueShift * 0.4));
+        g = Math.round(255 * intensity * (1 - blueShift * 0.2));
+        b = Math.round(255 * intensity);
         a = 1;
         break;
 
@@ -666,15 +668,15 @@
         var distFromCenter = Math.abs(colN - 0.5) * 2;
         var panelActive = ls.progress > distFromCenter * 0.6 ? 1 : 0;
         var bright2 = on * riseB * panelActive;
-        // Rising amber
-        r = Math.round(255 * bright2);
-        g = Math.round(220 * bright2 * (1 - ls.progress * 0.2));
-        b = Math.round(100 * bright2 * (1 - ls.progress * 0.5));
+        // White with increasing blue
+        r = Math.round(255 * bright2 * (0.9 - ls.progress * 0.3));
+        g = Math.round(255 * bright2 * (0.9 - ls.progress * 0.2));
+        b = Math.round(255 * bright2);
         a = 1;
         break;
 
       case 'drop':
-        // Full energy: warm disco flashing on beat, color sweeps
+        // Full energy: bright white/blue/cyan flashing on beat, color sweeps
         var beatPulse = Math.pow(Math.max(0, 1 - beatFrac * 4), 2);
         var sweep = Math.sin(beat * 0.25 + colN * Math.PI * 3);
         var colorMode = Math.floor(beat / 4) % 3;
@@ -686,28 +688,28 @@
           g = Math.round(255 * peak);
           b = Math.round(255 * peak);
         } else if (colorMode === 1) {
-          // Gold/amber
-          r = Math.round(255 * peak);
+          // Blue/cyan
+          r = Math.round(100 * peak);
           g = Math.round(200 * peak);
-          b = Math.round(80 * peak);
+          b = Math.round(255 * peak);
         } else {
-          // Warm alternating columns
-          var isGold = (col + Math.floor(beat / 2)) % 2;
-          r = Math.round((isGold ? 255 : 255) * peak);
-          g = Math.round((isGold ? 215 : 255) * peak);
-          b = Math.round((isGold ? 0 : 255) * peak);
+          // White/light blue alternating columns
+          var isBlue = (col + Math.floor(beat / 2)) % 2;
+          r = Math.round((isBlue ? 80 : 255) * peak);
+          g = Math.round((isBlue ? 160 : 255) * peak);
+          b = Math.round(255 * peak);
         }
         a = 1;
         break;
 
       case 'outro':
-        // Fading amber glow, panels turn off row by row from top
+        // Fading white/blue glow, panels turn off row by row from top
         var fadeOut = 1 - ls.progress;
         var rowFade = Math.max(0, 1 - (ls.progress * rows - (rows - 1 - row)) * 0.8);
         var glow = fadeOut * rowFade * (0.4 + Math.sin(t * 0.6 + col * 0.3) * 0.2);
-        r = Math.round(255 * glow);
-        g = Math.round(200 * glow);
-        b = Math.round(100 * glow);
+        r = Math.round(180 * glow);
+        g = Math.round(210 * glow);
+        b = Math.round(255 * glow);
         a = 1;
         break;
 
@@ -981,76 +983,181 @@
     );
   }
 
-  // ─── Speaker stacks (big PA rig) ─────────────────────────────────────
+  // ─── PA System (Line Arrays + Subwoofers) ──────────────────────────────
 
-  function drawSpeakerCone(screenX, screenY, outerR, s) {
-    // Outer ring
-    ctx.strokeStyle = '#3a3a3a';
-    ctx.lineWidth = Math.max(1, 1.5 * s);
+  function drawFloatingBlock(rx, ry, rw, rh, elevBot, elevTop, topColor, frontColor, sideColor) {
+    var base = worldRectToIsoDiamond(rx, ry, rw, rh);
+    var bot = [], top = [];
+    for (var i = 0; i < base.length; i++) {
+      bot.push({ x: base[i].x, y: base[i].y - elevBot * HEIGHT_SCALE });
+      top.push({ x: base[i].x, y: base[i].y - elevTop * HEIGHT_SCALE });
+    }
+    // Front face
+    var fg = ctx.createLinearGradient(top[3].x, top[3].y, bot[3].x, bot[3].y);
+    fg.addColorStop(0, lightenColor(frontColor, 0.15));
+    fg.addColorStop(1, darkenColor(frontColor, 0.7));
+    ctx.fillStyle = fg;
     ctx.beginPath();
-    ctx.arc(screenX, screenY, outerR, 0, Math.PI * 2);
-    ctx.stroke();
-    // Mid ring
-    ctx.strokeStyle = '#2a2a2a';
-    ctx.lineWidth = Math.max(0.8, 1 * s);
+    ctx.moveTo(top[3].x, top[3].y);
+    ctx.lineTo(top[2].x, top[2].y);
+    ctx.lineTo(bot[2].x, bot[2].y);
+    ctx.lineTo(bot[3].x, bot[3].y);
+    ctx.closePath();
+    ctx.fill();
+    // Right side
+    var sg = ctx.createLinearGradient(top[1].x, top[1].y, top[2].x, top[2].y);
+    sg.addColorStop(0, lightenColor(sideColor, 0.1));
+    sg.addColorStop(1, darkenColor(sideColor, 0.8));
+    ctx.fillStyle = sg;
     ctx.beginPath();
-    ctx.arc(screenX, screenY, outerR * 0.6, 0, Math.PI * 2);
-    ctx.stroke();
-    // Dust cap
-    ctx.fillStyle = '#222222';
+    ctx.moveTo(top[2].x, top[2].y);
+    ctx.lineTo(top[1].x, top[1].y);
+    ctx.lineTo(bot[1].x, bot[1].y);
+    ctx.lineTo(bot[2].x, bot[2].y);
+    ctx.closePath();
+    ctx.fill();
+    // Top face
+    var tg = ctx.createLinearGradient(top[0].x, top[0].y, top[2].x, top[2].y);
+    tg.addColorStop(0, lightenColor(topColor, 0.1));
+    tg.addColorStop(1, topColor);
+    ctx.fillStyle = tg;
     ctx.beginPath();
-    ctx.arc(screenX, screenY, outerR * 0.25, 0, Math.PI * 2);
+    ctx.moveTo(top[0].x, top[0].y);
+    ctx.lineTo(top[1].x, top[1].y);
+    ctx.lineTo(top[2].x, top[2].y);
+    ctx.lineTo(top[3].x, top[3].y);
+    ctx.closePath();
     ctx.fill();
   }
 
-  function drawSpeakerStack(wx, wy) {
+  function drawPA(baseX, baseY) {
+    var ls = getLightshowState(animTime);
     var s = TILE_SCALE;
+    var beatPulse = Math.pow(Math.abs(Math.sin(ls.beat * Math.PI)), 4);
+    var bassPulse = Math.pow(Math.abs(Math.sin(ls.beat * Math.PI)), 6);
 
-    // Sub bass (bottom) — widest, 2 stacked subs
-    drawRaisedBlockGradient(wx - 22, wy - 14, 44, 28, 16, '#141414', '#111111', '#0d0d0d');
-    drawRaisedBlockGradient(wx - 22, wy - 14, 44, 28, 32, '#161616', '#121212', '#0e0e0e');
+    // ── Dimensions ──
+    var subW = 30, subD = 18, subH = 13;
+    var cabW = 26, cabD = 7, cabH = 4;
+    var arrayCabs = 5, cabSpacing = 5;
+    var arrayBaseElev = 34;
 
-    // Sub woofers on front face (one per sub cab)
-    var subFront = worldToScreen(wx, wy + 14);
-    drawSpeakerCone(subFront.x, subFront.y - 8 * HEIGHT_SCALE, 8 * s, s);
-    drawSpeakerCone(subFront.x, subFront.y - 24 * HEIGHT_SCALE, 8 * s, s);
+    // Center line array above subs
+    var arrayX = baseX + (subW - cabW) / 2;
+    var arrayY = baseY + (subD - cabD) / 2;
 
-    // Main cabs (middle) — 2 stacked, slightly narrower
-    drawRaisedBlockGradient(wx - 18, wy - 11, 36, 22, 46, '#1a1a1a', '#151515', '#101010');
-    drawRaisedBlockGradient(wx - 18, wy - 11, 36, 22, 58, '#1c1c1c', '#161616', '#111111');
+    // ── Bass pressure glow on floor ──
+    if (bassPulse > 0.1) {
+      var subCenter = worldToScreen(baseX + subW / 2, baseY + subD / 2);
+      var glowR = 25 * s;
+      var gr = ctx.createRadialGradient(subCenter.x, subCenter.y, 0, subCenter.x, subCenter.y, glowR);
+      gr.addColorStop(0, 'rgba(60,30,120,' + (bassPulse * 0.12).toFixed(3) + ')');
+      gr.addColorStop(1, 'rgba(60,30,120,0)');
+      ctx.fillStyle = gr;
+      ctx.beginPath();
+      ctx.arc(subCenter.x, subCenter.y, glowR, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
-    // Main woofers on front
-    var mainFront = worldToScreen(wx, wy + 11);
-    drawSpeakerCone(mainFront.x, mainFront.y - 39 * HEIGHT_SCALE, 6 * s, s);
-    drawSpeakerCone(mainFront.x, mainFront.y - 52 * HEIGHT_SCALE, 6 * s, s);
+    // ── Ground subs (2 stacked) ──
+    var vib = bassPulse * 0.3;
+    // Bottom sub
+    drawRaisedBlockGradient(baseX, baseY + vib, subW, subD, subH,
+      '#131315', '#0d0d0f', '#080809');
+    // Top sub
+    drawFloatingBlock(baseX, baseY + vib, subW, subD, subH, subH * 2,
+      '#161618', '#101012', '#0a0a0c');
 
-    // Top cab (HF horn) — smallest on top
-    drawRaisedBlockGradient(wx - 14, wy - 8, 28, 16, 68, '#1e1e1e', '#181818', '#121212');
+    // Sub ports on front face
+    var subFrontL = worldToScreen(baseX + subW * 0.2, baseY + subD + vib);
+    var subFrontR = worldToScreen(baseX + subW * 0.8, baseY + subD + vib);
+    for (var si = 0; si < 2; si++) {
+      var portElev = (subH * si + subH * 0.5) * HEIGHT_SCALE;
+      var pMidY = (subFrontL.y + subFrontR.y) / 2 - portElev;
+      var portW = (subFrontR.x - subFrontL.x) * 0.85;
+      var portH = 3 * s;
+      var portX = (subFrontL.x + subFrontR.x) / 2 - portW / 2;
+      ctx.fillStyle = '#040405';
+      ctx.fillRect(portX, pMidY - portH / 2, portW, portH);
+      ctx.strokeStyle = 'rgba(25,25,30,0.5)';
+      ctx.lineWidth = Math.max(0.5, 0.7 * s);
+      ctx.strokeRect(portX, pMidY - portH / 2, portW, portH);
+    }
 
-    // Horn / tweeter on top cab
-    var topFront = worldToScreen(wx, wy + 8);
-    var topLift = 63 * HEIGHT_SCALE;
-    // Horn rectangle
-    ctx.fillStyle = '#252525';
-    ctx.fillRect(topFront.x - 5 * s, topFront.y - topLift - 3 * s, 10 * s, 6 * s);
-    ctx.strokeStyle = '#3a3a3a';
-    ctx.lineWidth = Math.max(0.5, 0.8 * s);
-    ctx.strokeRect(topFront.x - 5 * s, topFront.y - topLift - 3 * s, 10 * s, 6 * s);
-    // Horn throat
-    ctx.fillStyle = '#333333';
+    // ── Rigging hardware ──
+    var chainPt = worldToScreen(arrayX + cabW / 2, arrayY + cabD / 2);
+    var chainTopElev = (arrayBaseElev + (arrayCabs - 1) * cabSpacing + cabH + 6) * HEIGHT_SCALE;
+    var chainBotElev = (arrayBaseElev + (arrayCabs - 1) * cabSpacing + cabH) * HEIGHT_SCALE;
+
+    // Rigging rod
+    ctx.strokeStyle = '#3a3a3e';
+    ctx.lineWidth = Math.max(0.8, 1 * s);
     ctx.beginPath();
-    ctx.arc(topFront.x, topFront.y - topLift, 2 * s, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Rigging hardware detail — metal bracket on top
-    ctx.strokeStyle = '#444444';
-    ctx.lineWidth = Math.max(1, 1.5 * s);
-    var rigTop = worldToScreen(wx, wy);
-    var rigLift = 68 * HEIGHT_SCALE;
-    ctx.beginPath();
-    ctx.moveTo(rigTop.x - 3 * s, rigTop.y - rigLift - 2 * s);
-    ctx.lineTo(rigTop.x + 3 * s, rigTop.y - rigLift - 2 * s);
+    ctx.moveTo(chainPt.x, chainPt.y - chainTopElev);
+    ctx.lineTo(chainPt.x, chainPt.y - chainBotElev);
     ctx.stroke();
+
+    // Bracket plate at top
+    var bw = 8 * s, bh = 2 * s;
+    ctx.fillStyle = '#2a2a2e';
+    ctx.fillRect(chainPt.x - bw / 2, chainPt.y - chainTopElev - bh / 2, bw, bh);
+    ctx.strokeStyle = '#3e3e42';
+    ctx.lineWidth = Math.max(0.5, 0.7 * s);
+    ctx.strokeRect(chainPt.x - bw / 2, chainPt.y - chainTopElev - bh / 2, bw, bh);
+
+    // ── Line array elements (bottom to top) ──
+    for (var i = 0; i < arrayCabs; i++) {
+      var elevBot = arrayBaseElev + i * cabSpacing;
+      var elevTop = elevBot + cabH;
+
+      // J-curve: bottom 2 elements tilt forward
+      var fwd = 0;
+      if (i === 0) fwd = 2.5;
+      else if (i === 1) fwd = 1;
+
+      // Slightly lighter per cab going up
+      var shade = 0.02 * i;
+      var topC = lightenColor('#1c1c1e', shade);
+      var frontC = lightenColor('#141416', shade);
+      var sideC = lightenColor('#0e0e10', shade);
+
+      drawFloatingBlock(arrayX, arrayY + fwd, cabW, cabD, elevBot, elevTop,
+        topC, frontC, sideC);
+
+      // Waveguide slit on front face
+      var wgL = worldToScreen(arrayX + 1, arrayY + cabD + fwd);
+      var wgR = worldToScreen(arrayX + cabW - 1, arrayY + cabD + fwd);
+      var wgElev = (elevBot + cabH * 0.5) * HEIGHT_SCALE;
+      var wgY = (wgL.y + wgR.y) / 2 - wgElev;
+
+      // Grille texture lines
+      ctx.strokeStyle = 'rgba(35,35,40,0.5)';
+      ctx.lineWidth = Math.max(0.4, 0.5 * s);
+      ctx.beginPath();
+      ctx.moveTo(wgL.x, wgY - 0.8 * s);
+      ctx.lineTo(wgR.x, wgY - 0.8 * s);
+      ctx.moveTo(wgL.x, wgY + 0.8 * s);
+      ctx.lineTo(wgR.x, wgY + 0.8 * s);
+      ctx.stroke();
+
+      // Waveguide slit glow (beat-reactive)
+      var wgAlpha = 0.06 + beatPulse * 0.35;
+      ctx.strokeStyle = 'rgba(170,195,255,' + wgAlpha.toFixed(3) + ')';
+      ctx.lineWidth = Math.max(1, 1.4 * s);
+      ctx.beginPath();
+      ctx.moveTo(wgL.x + 1 * s, wgY);
+      ctx.lineTo(wgR.x - 1 * s, wgY);
+      ctx.stroke();
+
+      // Bloom on strong beats
+      if (beatPulse > 0.4) {
+        var cx = (wgL.x + wgR.x) / 2;
+        ctx.fillStyle = 'rgba(130,160,255,' + (beatPulse * 0.08).toFixed(3) + ')';
+        ctx.beginPath();
+        ctx.arc(cx, wgY, 6 * s, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
   }
 
   // ─── Atmospheric lights (lightshow-synced) ─────────────────────────────
@@ -1095,8 +1202,8 @@
     var leftScreen = worldToScreen(200, 280);
     var lA = 0.08 * leftMult + Math.sin(t * 1.5) * 0.03 * leftMult;
     var lgr = ctx.createRadialGradient(leftScreen.x, leftScreen.y, 0, leftScreen.x, leftScreen.y, beamR);
-    lgr.addColorStop(0, 'rgba(255,180,60,' + lA.toFixed(3) + ')');
-    lgr.addColorStop(1, 'rgba(255,180,60,0)');
+    lgr.addColorStop(0, 'rgba(60,120,255,' + lA.toFixed(3) + ')');
+    lgr.addColorStop(1, 'rgba(60,120,255,0)');
     ctx.fillStyle = lgr;
     ctx.fillRect(leftScreen.x - beamR, leftScreen.y - beamR, beamR * 2, beamR * 2);
 
@@ -1104,8 +1211,8 @@
     var rightScreen = worldToScreen(600, 280);
     var rA = 0.08 * rightMult + Math.sin(t * 2.0) * 0.03 * rightMult;
     var rgr = ctx.createRadialGradient(rightScreen.x, rightScreen.y, 0, rightScreen.x, rightScreen.y, beamR);
-    rgr.addColorStop(0, 'rgba(255,220,140,' + rA.toFixed(3) + ')');
-    rgr.addColorStop(1, 'rgba(255,220,140,0)');
+    rgr.addColorStop(0, 'rgba(180,200,255,' + rA.toFixed(3) + ')');
+    rgr.addColorStop(1, 'rgba(180,200,255,0)');
     ctx.fillStyle = rgr;
     ctx.fillRect(rightScreen.x - beamR, rightScreen.y - beamR, beamR * 2, beamR * 2);
 
@@ -1114,8 +1221,8 @@
       var centerScreen = worldToScreen(400, 300);
       var cA = onBeat * 0.12;
       var cgr = ctx.createRadialGradient(centerScreen.x, centerScreen.y, 0, centerScreen.x, centerScreen.y, beamR * 1.5);
-      cgr.addColorStop(0, 'rgba(255,230,180,' + cA.toFixed(3) + ')');
-      cgr.addColorStop(1, 'rgba(255,230,180,0)');
+      cgr.addColorStop(0, 'rgba(220,230,255,' + cA.toFixed(3) + ')');
+      cgr.addColorStop(1, 'rgba(220,230,255,0)');
       ctx.fillStyle = cgr;
       ctx.fillRect(centerScreen.x - beamR * 1.5, centerScreen.y - beamR * 1.5, beamR * 3, beamR * 3);
     }
@@ -1310,14 +1417,15 @@
     return d;
   }
 
-  // ─── DJ NPC drawing ─────────────────────────────────────────────────────
+  // ─── DJ Duo drawing ─────────────────────────────────────────────────────
 
+  // Positions for the duo: Revilo (left CDJ) and Longfield (right CDJ)
   var DJ_DUO = [
-    {wx: 375, wy: 38, color: '#FFD700', phaseOff: 0, name: 'REVILO', heightScale: 1.0},
-    {wx: 425, wy: 32, color: '#FFBF00', phaseOff: 0.7, name: 'LONGFIELD', heightScale: 0.85}
+    { wx: 375, wy: 38, color: '#ddddcc', phaseOff: 0 },
+    { wx: 425, wy: 32, color: '#ccccbb', phaseOff: 0.7 }
   ];
 
-  function drawSingleDJFigure(wx, wy, color, phaseOff, heightScale) {
+  function drawSingleDJFigure(wx, wy, color, phaseOff) {
     var L = LAYOUT;
     var radius = Game.CONSTANTS.PLAYER_RADIUS;
 
@@ -1325,26 +1433,21 @@
     var sx = screen.x;
     var sy = screen.y;
 
-    // Lift by booth elevation
     var boothLift = L.DJ_BOOTH_ELEVATION * HEIGHT_SCALE;
     sy -= boothLift;
 
-    // Subtle bounce animation (intensity 0.4 - half the player dance)
     var beat = (animTime / DANCE_BEAT_MS) * Math.PI * 2 + phaseOff;
     var bounceIntensity = 0.4;
     var bounceY = Math.abs(Math.sin(beat)) * 3 * bounceIntensity * TILE_SCALE;
     sy -= bounceY;
 
-    // -- Soft shadow --
     drawSoftShadow(screen.x, screen.y - boothLift, radius * 1.2);
 
-    // -- Body dimensions --
-    var bodyHeight = radius * 1.8 * heightScale;
+    var bodyHeight = radius * 1.8;
     var bodyWidth = radius * 0.7;
     var bodyCenterY = sy - radius * 0.5;
     var bodyBottom = bodyCenterY + bodyHeight * TILE_SCALE * 0.5;
 
-    // -- Legs --
     var legSpread = 3 * TILE_SCALE;
     var legLength = radius * 0.7 * TILE_SCALE;
     var limbColor = darkenColor(color, 0.6);
@@ -1358,13 +1461,11 @@
     ctx.moveTo(sx - legSpread * 0.5, bodyBottom);
     ctx.lineTo(sx - legSpread * 0.5, bodyBottom + legLength);
     ctx.stroke();
-
     ctx.beginPath();
     ctx.moveTo(sx + legSpread * 0.5, bodyBottom);
     ctx.lineTo(sx + legSpread * 0.5, bodyBottom + legLength);
     ctx.stroke();
 
-    // Shoes
     var shoeSize = Math.max(2, 2.5 * TILE_SCALE);
     ctx.fillStyle = '#1a1a1a';
     ctx.beginPath();
@@ -1374,7 +1475,6 @@
     ctx.ellipse(sx + legSpread * 0.5, bodyBottom + legLength, shoeSize, shoeSize * 0.6, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // -- Body --
     var bodyGrad = ctx.createLinearGradient(
       sx - bodyWidth * TILE_SCALE, bodyCenterY,
       sx + bodyWidth * TILE_SCALE, bodyCenterY
@@ -1390,18 +1490,14 @@
     ctx.lineWidth = 0.8;
     ctx.stroke();
 
-    // -- Arms reaching down toward decks --
     var armAttachY = bodyCenterY - bodyHeight * TILE_SCALE * 0.1;
     var armLength = radius * 0.9 * TILE_SCALE;
-
-    // DJ-specific angles: arms reach forward/down toward decks with small oscillation
     var armOsc = Math.sin(beat * 0.5) * 0.1;
     var leftArmA = 0.15 + armOsc;
     var rightArmA = 0.15 - armOsc;
 
     var lArmAttachX = sx - bodyWidth * TILE_SCALE * 0.85;
     var rArmAttachX = sx + bodyWidth * TILE_SCALE * 0.85;
-
     var lArmEndX = lArmAttachX - Math.sin(leftArmA) * armLength;
     var lArmEndY = armAttachY + Math.cos(leftArmA) * armLength;
     var rArmEndX = rArmAttachX + Math.sin(rightArmA) * armLength;
@@ -1410,18 +1506,15 @@
     ctx.strokeStyle = limbColor;
     ctx.lineWidth = limbWidth;
     ctx.lineCap = 'round';
-
     ctx.beginPath();
     ctx.moveTo(lArmAttachX, armAttachY);
     ctx.lineTo(lArmEndX, lArmEndY);
     ctx.stroke();
-
     ctx.beginPath();
     ctx.moveTo(rArmAttachX, armAttachY);
     ctx.lineTo(rArmEndX, rArmEndY);
     ctx.stroke();
 
-    // Hands
     var handSize = Math.max(1.5, 2 * TILE_SCALE);
     ctx.fillStyle = lightenColor(color, 0.35);
     ctx.beginPath();
@@ -1431,7 +1524,6 @@
     ctx.arc(rArmEndX, rArmEndY, handSize, 0, Math.PI * 2);
     ctx.fill();
 
-    // -- Head --
     var headBob = Math.sin(beat * 2) * 0.5 * bounceIntensity * TILE_SCALE;
     var headY = sy - bodyHeight * 0.7 - headBob;
     var headR = radius * 0.55;
@@ -1449,16 +1541,13 @@
     ctx.lineWidth = 0.8;
     ctx.stroke();
 
-    // -- Headphones --
+    // Headphones
     var hpRadius = headR * TILE_SCALE * 1.15;
-    // Arc over head
     ctx.strokeStyle = '#333333';
     ctx.lineWidth = Math.max(2, 2.5 * TILE_SCALE);
     ctx.beginPath();
     ctx.arc(sx, headY, hpRadius, Math.PI + 0.3, -0.3);
     ctx.stroke();
-
-    // Ear cups
     var cupSize = Math.max(3, 4 * TILE_SCALE);
     ctx.fillStyle = '#333333';
     ctx.beginPath();
@@ -1468,7 +1557,7 @@
     ctx.arc(sx + hpRadius * 0.92, headY + 2, cupSize, 0, Math.PI * 2);
     ctx.fill();
 
-    // -- Eyes (looking slightly down at decks) --
+    // Eyes looking down at decks
     var eyeSpread = headR * TILE_SCALE * 0.35;
     var eyeY = headY - headR * TILE_SCALE * 0.1;
     var eyeSize = Math.max(1, 1.3 * TILE_SCALE);
@@ -1479,8 +1568,6 @@
     ctx.beginPath();
     ctx.arc(sx + eyeSpread, eyeY, eyeSize, 0, Math.PI * 2);
     ctx.fill();
-
-    // Pupils looking slightly down
     var pupilSize = eyeSize * 0.55;
     var pupilOffY = eyeSize * 0.35;
     ctx.fillStyle = '#111111';
@@ -1491,30 +1578,31 @@
     ctx.arc(sx + eyeSpread, eyeY + pupilOffY, pupilSize, 0, Math.PI * 2);
     ctx.fill();
 
-    return {headY: headY, headR: headR, sx: sx};
+    return { headY: headY, headR: headR, sx: sx };
   }
 
   function drawDJ() {
-    var results = [];
+    // Draw both members of the duo
     for (var d = 0; d < DJ_DUO.length; d++) {
       var dj = DJ_DUO[d];
-      var res = drawSingleDJFigure(dj.wx, dj.wy, dj.color, dj.phaseOff, dj.heightScale);
-      results.push(res);
+      drawSingleDJFigure(dj.wx, dj.wy, dj.color, dj.phaseOff);
     }
 
-    // Shared animated 'REVILO & LONGFIELD' logo above the booth
-    var centerScreen = worldToScreen(400, 35);
-    var boothLift = LAYOUT.DJ_BOOTH_ELEVATION * HEIGHT_SCALE;
-    var nameY = centerScreen.y - boothLift - 30 * TILE_SCALE;
-    var fontSize = Math.max(10, Math.round(13 * zoomLevel));
+    // Shared name tag above and between the two (centered on booth)
+    var centerScreen = worldToScreen(DJ_X, DJ_Y);
+    var L = LAYOUT;
+    var boothLift = L.DJ_BOOTH_ELEVATION * HEIGHT_SCALE;
+    var nameY = centerScreen.y - boothLift - Game.CONSTANTS.PLAYER_RADIUS * 2.4 * TILE_SCALE;
+    var fontSize = Math.max(9, Math.round(11 * zoomLevel));
     ctx.font = 'bold ' + fontSize + 'px Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
-    ctx.fillStyle = '#FFD700';
-    ctx.shadowColor = '#FFD700';
-    ctx.shadowBlur = 8 + Math.sin(animTime / 500) * 6;
+
+    ctx.fillStyle = COLORS.NAME_SHADOW;
+    ctx.fillText('REVILO & LONGFIELD', centerScreen.x + 1, nameY + 1);
+
+    ctx.fillStyle = '#00d4ff';
     ctx.fillText('REVILO & LONGFIELD', centerScreen.x, nameY);
-    ctx.shadowBlur = 0;
   }
 
   // ─── Bartender NPC drawing ─────────────────────────────────────────────
@@ -1917,26 +2005,12 @@
     }
 
     // Apply dance body movement (takes over from walk when dancing)
-    var energyMult = (player.energy !== undefined) ? (0.5 + player.energy * 0.5) : 1;
-    var bounceY = dance.bounceY * danceIntensity * TILE_SCALE * energyMult;
+    var bounceY = dance.bounceY * danceIntensity * TILE_SCALE;
     var swayX = dance.swayX * danceIntensity * TILE_SCALE;
     // Blend: walk dominates while moving, dance dominates while idle on dance zone
     var moveBlend = Math.max(0, 1 - danceIntensity);
     sy -= walkBobY * moveBlend + bounceY;
     sx += walkLeanX * moveBlend + swayX;
-
-    // Dance circle glow on floor
-    if (player.danceCircleRole === 'center') {
-      ctx.save();
-      var circleGlow = ctx.createRadialGradient(sx, sy, 0, sx, sy, 30 * TILE_SCALE);
-      circleGlow.addColorStop(0, 'rgba(255,215,0,0.15)');
-      circleGlow.addColorStop(1, 'rgba(255,215,0,0)');
-      ctx.fillStyle = circleGlow;
-      ctx.beginPath();
-      ctx.arc(sx, sy, 30 * TILE_SCALE, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
 
     // ── Soft shadow ──
     var shadowStretch = 1 + danceIntensity * dance.bounceY * 0.03 + walkIntensity * 0.05;
@@ -2080,33 +2154,6 @@
     ctx.arc(rArmEndX, rArmEndY, handSize, 0, Math.PI * 2);
     ctx.fill();
 
-
-    // Hand raised (NPC crowd behavior)
-    if (player.handRaised) {
-      // Draw arms extended straight up
-      ctx.strokeStyle = limbColor;
-      ctx.lineWidth = limbWidth;
-      ctx.lineCap = 'round';
-      // Left arm up
-      ctx.beginPath();
-      ctx.moveTo(lArmAttachX, armAttachY);
-      ctx.lineTo(lArmAttachX - 2 * TILE_SCALE, armAttachY - armLength * 1.3);
-      ctx.stroke();
-      // Right arm up
-      ctx.beginPath();
-      ctx.moveTo(rArmAttachX, armAttachY);
-      ctx.lineTo(rArmAttachX + 2 * TILE_SCALE, armAttachY - armLength * 1.3);
-      ctx.stroke();
-      // Hands at top
-      ctx.fillStyle = lightenColor(color, 0.35);
-      ctx.beginPath();
-      ctx.arc(lArmAttachX - 2 * TILE_SCALE, armAttachY - armLength * 1.3, handSize, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(rArmAttachX + 2 * TILE_SCALE, armAttachY - armLength * 1.3, handSize, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
     // ── Carried drink (right hand) ──
     var isCarrying = isLocal ? Game.localPlayer.drinkState === 'carrying' : player.drinkState === 'carrying';
     if (isCarrying) {
@@ -2192,21 +2239,6 @@
     ctx.arc(headSx + eyeSpread + pupilOffX, eyeY + pupilOffY, pupilSize, 0, Math.PI * 2);
     ctx.fill();
 
-
-    // Cheering effect (NPC crowd)
-    if (player.cheering) {
-      var cheerAlpha = 0.5 + 0.5 * Math.sin(animTime / 200 + (player.x || 0));
-      ctx.save();
-      ctx.globalAlpha = cheerAlpha;
-      ctx.font = 'bold ' + Math.max(8, Math.round(10 * TILE_SCALE)) + 'px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#FFD700';
-      var cheerY = headY - headR * TILE_SCALE - 8 * TILE_SCALE;
-      var cheerSymbol = Math.floor(animTime / 300 + (player.x || 0)) % 3;
-      ctx.fillText(cheerSymbol === 0 ? '!' : cheerSymbol === 1 ? '★' : '♪', sx, cheerY);
-      ctx.restore();
-    }
-
     // ── Floating music notes when dancing ──
     if (danceIntensity > 0.3) {
       var noteAlpha = (danceIntensity - 0.3) / 0.7;
@@ -2275,7 +2307,7 @@
   function buildDrawables() {
     var drawables = [];
     var L = LAYOUT;
-    var isMain = (Game.currentRoom || 'main') === 'main';
+    var isMain = Game.currentRoom === 'main';
 
     if (isMain) {
       for (var i = 0; i < L.TABLES.length; i++) {
@@ -2293,7 +2325,7 @@
         data: null
       });
 
-      // DJ NPC
+      // DJ duo
       drawables.push({
         type: 'dj',
         sortKey: DJ_X + DJ_Y,
@@ -2338,16 +2370,14 @@
       });
     }
 
-    // Crowd NPCs (main room only)
-    if (isMain) {
-      var crowd = Game.crowdNPCs;
-      for (var c = 0; c < crowd.length; c++) {
-        drawables.push({
-          type: 'player',
-          sortKey: crowd[c].x + crowd[c].y,
-          data: { player: crowd[c], isLocal: false }
-        });
-      }
+    // Crowd NPCs (any room — game.js handles which NPCs are present)
+    var crowd = Game.crowdNPCs;
+    for (var c = 0; c < crowd.length; c++) {
+      drawables.push({
+        type: 'player',
+        sortKey: crowd[c].x + crowd[c].y,
+        data: { player: crowd[c], isLocal: false }
+      });
     }
 
     drawables.sort(function (a, b) {
@@ -2462,8 +2492,9 @@
       ctx.stroke();
     }
 
-    // 6. Interactable markers (bookings position)
+    // 6. Interactable markers (demo_drop and bookings positions)
     var markers = [
+      { x: 300, y: 120, label: 'Demo Drop' },
       { x: 480, y: 200, label: 'Bookings' }
     ];
     var pulseAlpha = 0.4 + 0.3 * Math.sin(animTime / 600);
@@ -2515,42 +2546,18 @@
       { x: 180, y: 250 },
       { x: 420, y: 250 }
     ];
-    // Get interactable data for isReal distinction
-    var releaseInteractables = (typeof Rooms !== 'undefined' && Rooms.getRoomInteractables) ? 
-        Rooms.getRoomInteractables('releases') : [];
     var pulseAlpha = 0.4 + 0.3 * Math.sin(animTime / 600);
     for (var i = 0; i < crates.length; i++) {
-      var isReal = (releaseInteractables[i] && releaseInteractables[i].releaseData && releaseInteractables[i].releaseData.isReal);
-      if (isReal) {
-        // Brighter golden crate for real release
-        drawRaisedBlockGradient(crates[i].x - 15, crates[i].y - 15, 30, 30, 8, '#4a3a20', '#3a2a18', '#2a1a10');
-        // Gold glow indicator
-        var cs = worldToScreen(crates[i].x, crates[i].y);
-        ctx.save();
-        ctx.globalAlpha = pulseAlpha;
-        ctx.fillStyle = 'rgba(255,215,0,0.4)';
-        ctx.beginPath();
-        ctx.arc(cs.x, cs.y, 12 * TILE_SCALE, 0, Math.PI * 2);
-        ctx.fill();
-        // Star badge
-        ctx.globalAlpha = pulseAlpha + 0.2;
-        ctx.font = 'bold ' + Math.max(10, Math.round(12 * TILE_SCALE)) + 'px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#FFD700';
-        ctx.fillText('★', cs.x, cs.y - 14 * TILE_SCALE);
-        ctx.restore();
-      } else {
-        // Dimmer crate for placeholder
-        drawRaisedBlockGradient(crates[i].x - 15, crates[i].y - 15, 30, 30, 8, '#3a3020', '#2a2218', '#221a10');
-        var cs = worldToScreen(crates[i].x, crates[i].y);
-        ctx.save();
-        ctx.globalAlpha = pulseAlpha * 0.5;
-        ctx.fillStyle = 'rgba(200,180,140,0.15)';
-        ctx.beginPath();
-        ctx.arc(cs.x, cs.y, 8 * TILE_SCALE, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
+      drawRaisedBlockGradient(crates[i].x - 15, crates[i].y - 15, 30, 30, 8, '#3a3020', '#2a2218', '#221a10');
+      // Pulsing interactable indicator
+      var cs = worldToScreen(crates[i].x, crates[i].y);
+      ctx.save();
+      ctx.globalAlpha = pulseAlpha;
+      ctx.fillStyle = 'rgba(255,200,120,0.3)';
+      ctx.beginPath();
+      ctx.arc(cs.x, cs.y, 10 * TILE_SCALE, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
 
     // 7. Turntable desk decoration (center-right area)
@@ -2633,98 +2640,6 @@
     drawSubRoomFrontWalls('#3a1a4a', '#2a1038', darkenColor('#2a1038', 0.7));
   }
 
-
-  function drawRooftopRoom() {
-    // 1. Night sky floor
-    drawSubRoomFloor('#0a0a1e');
-
-    // 2. Warm-tinted low walls
-    drawSubRoomWalls('#2a2028', '#1a1018', darkenColor('#1a1018', 0.7));
-
-    // 3. Moonlight ambient glow (soft white-blue from top-center)
-    var moonCenter = worldToScreen(350, 100);
-    var moonRadius = 250 * TILE_SCALE;
-    var moonGrad = ctx.createRadialGradient(moonCenter.x, moonCenter.y, 0, moonCenter.x, moonCenter.y, moonRadius);
-    moonGrad.addColorStop(0, 'rgba(200,210,240,0.12)');
-    moonGrad.addColorStop(0.5, 'rgba(180,190,220,0.05)');
-    moonGrad.addColorStop(1, 'rgba(160,170,200,0)');
-    ctx.fillStyle = moonGrad;
-    ctx.fillRect(moonCenter.x - moonRadius, moonCenter.y - moonRadius, moonRadius * 2, moonRadius * 2);
-
-    // 4. City skyline silhouette blocks on back wall
-    var buildings = [
-        {x: 40, y: 10, w: 40, h: 15}, {x: 100, y: 10, w: 30, h: 25},
-        {x: 150, y: 10, w: 50, h: 35}, {x: 220, y: 10, w: 35, h: 20},
-        {x: 280, y: 10, w: 45, h: 30}, {x: 350, y: 10, w: 55, h: 40},
-        {x: 430, y: 10, w: 40, h: 22}, {x: 490, y: 10, w: 50, h: 32},
-        {x: 560, y: 10, w: 35, h: 18}, {x: 620, y: 10, w: 40, h: 28}
-    ];
-    for (var b = 0; b < buildings.length; b++) {
-        var bld = buildings[b];
-        drawRaisedBlockGradient(bld.x, bld.y, bld.w, bld.h, bld.h, '#0e0e14', '#0a0a10', '#08080c');
-        // Tiny window lights
-        for (var wy = 0; wy < bld.h - 5; wy += 8) {
-            for (var wx = 5; wx < bld.w - 5; wx += 10) {
-                if (Math.random() > 0.4) {
-                    var winScreen = worldToScreen(bld.x + wx, bld.y + 3);
-                    var winLift = (bld.h - wy) * HEIGHT_SCALE;
-                    ctx.fillStyle = 'rgba(255,220,130,' + (0.15 + Math.random() * 0.2) + ')';
-                    ctx.fillRect(winScreen.x - 1, winScreen.y - winLift - 1, 2, 2);
-                }
-            }
-        }
-    }
-
-    // 5. String lights across top (golden glowing dots)
-    var stringY = 60;
-    var numLights = 12;
-    var lightPulse = 0.6 + 0.4 * Math.sin(animTime / 800);
-    for (var sl = 0; sl < numLights; sl++) {
-        var slx = 50 + sl * (600 / (numLights - 1));
-        var sag = Math.sin(sl / (numLights - 1) * Math.PI) * 15;
-        var slScreen = worldToScreen(slx, stringY + sag);
-        // Wire between lights
-        if (sl > 0) {
-            var prevX = 50 + (sl - 1) * (600 / (numLights - 1));
-            var prevSag = Math.sin((sl - 1) / (numLights - 1) * Math.PI) * 15;
-            var prevScreen = worldToScreen(prevX, stringY + prevSag);
-            ctx.strokeStyle = 'rgba(80,70,50,0.3)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(prevScreen.x, prevScreen.y - 20 * HEIGHT_SCALE);
-            ctx.lineTo(slScreen.x, slScreen.y - 20 * HEIGHT_SCALE);
-            ctx.stroke();
-        }
-        // Light bulb
-        ctx.save();
-        ctx.globalAlpha = lightPulse;
-        ctx.fillStyle = '#FFD700';
-        ctx.shadowColor = '#FFD700';
-        ctx.shadowBlur = 8 * TILE_SCALE;
-        ctx.beginPath();
-        ctx.arc(slScreen.x, slScreen.y - 20 * HEIGHT_SCALE, 3 * TILE_SCALE, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-    }
-
-    // 6. Interactable markers for bio/photos/epk
-    var markers = [
-        {x: 190, y: 105, label: 'Bio'},
-        {x: 390, y: 105, label: 'Photos'},
-        {x: 590, y: 105, label: 'EPK'}
-    ];
-    var pulseAlpha = 0.4 + 0.3 * Math.sin(animTime / 600);
-    for (var m = 0; m < markers.length; m++) {
-        var ms = worldToScreen(markers[m].x, markers[m].y);
-        ctx.save();
-        ctx.globalAlpha = pulseAlpha;
-        ctx.fillStyle = 'rgba(255,215,0,0.3)';
-        ctx.beginPath();
-        ctx.arc(ms.x, ms.y, 10 * TILE_SCALE, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-    }
-  }
   function drawDoors() {
     if (typeof Rooms === 'undefined' || !Rooms.getRoomDoors || !Game.currentRoom) {
       return;
@@ -2850,16 +2765,14 @@
       drawDanceFloor();
       drawLEDWallGlow();
       drawAtmosphericLights();
-      drawSpeakerStack(LAYOUT.SPEAKER_LEFT.x, LAYOUT.SPEAKER_LEFT.y);
-      drawSpeakerStack(LAYOUT.SPEAKER_RIGHT.x, LAYOUT.SPEAKER_RIGHT.y);
+      drawPA(LAYOUT.PA_LEFT_X, LAYOUT.PA_LEFT_Y);
+      drawPA(LAYOUT.PA_RIGHT_X, LAYOUT.PA_RIGHT_Y);
     } else if (room === 'backstage') {
       drawBackstageRoom();
     } else if (room === 'releases') {
       drawReleasesRoom();
     } else if (room === 'vip') {
       drawVIPRoom();
-    } else if (room === 'rooftop') {
-      drawRooftopRoom();
     }
 
     // 3. Doors (rendered in all rooms)
@@ -2893,8 +2806,6 @@
       drawSubRoomFrontWalls('#4a3828', '#3a2818', darkenColor('#3a2818', 0.7));
     } else if (room === 'vip') {
       drawSubRoomFrontWalls('#3a1a4a', '#2a1038', darkenColor('#2a1038', 0.7));
-    } else if (room === 'rooftop') {
-      drawSubRoomFrontWalls('#2a2028', '#1a1018', darkenColor('#1a1018', 0.7));
     }
 
     // 6. Vignette (all rooms)

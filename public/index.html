@@ -2,64 +2,67 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Boiler Room</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Revilo & Longfield</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <canvas id="gameCanvas" width="1000" height="700"></canvas>
 
-  <div id="nameOverlay" class="overlay">
-    <div class="overlay-content">
-      <h2>Enter Your Name</h2>
-      <input type="text" id="nameInput" maxlength="16" placeholder="Your name" autofocus>
-      <button id="nameSubmit">Join</button>
+  <!-- Entrance overlay -->
+  <div id="entranceOverlay" class="entrance-overlay">
+    <div class="entrance-particles"></div>
+    <div class="entrance-content">
+      <img src="11480_Revilo & Longfield_RD_C.png" alt="R&L" class="entrance-logo" onerror="this.style.display='none'">
+      <h1 class="entrance-title">REVILO &amp; LONGFIELD</h1>
+      <button id="enterBtn" class="entrance-btn">ENTER</button>
     </div>
   </div>
 
-  <div id="disconnectedOverlay" class="overlay" style="display:none;">
-    <div class="overlay-content">
-      <h2>Disconnected</h2>
-      <p>Lost connection to server.</p>
-      <button id="reconnectBtn">Reconnect</button>
-    </div>
+  <!-- Instruction overlay -->
+  <div id="instructionOverlay" class="instruction-overlay" style="opacity:0">
+    WASD to move &middot; E to interact &middot; Explore the club!
   </div>
 
-  <div id="autoplayOverlay" class="overlay" style="display:none;">
-    <div class="overlay-content">
-      <h2>Click to Play</h2>
-      <p>Browser requires user interaction to play audio</p>
-      <button id="autoplayUnlockBtn">Click to Play</button>
-    </div>
+  <!-- Modal container -->
+  <div id="modalContainer" class="modal-container" style="display:none"></div>
+
+  <!-- Minimap -->
+  <div id="minimap">
+    <div id="minimapLabel" class="minimap-label">Main Club</div>
+    <canvas id="minimapCanvas" width="120" height="90"></canvas>
   </div>
 
+  <!-- Now playing bar -->
   <div id="nowPlaying">
-    <iframe id="sc-widget"
-            src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/playlists/1&color=FFD700&auto_play=false&hide_related=true"
-            width="100%" height="0" scrolling="no" frameborder="no"
-            allow="autoplay"
-            style="overflow:hidden;"></iframe>
-    <div class="now-playing-info">
-      <div class="track-title">No Track Playing</div>
-      <div class="track-artist">Select a track to begin</div>
+    <div class="now-playing-left">
+      <button id="muteToggle" class="mute-toggle" title="Unmute">&#128263;</button>
+      <div class="now-playing-info">
+        <div class="track-title">No Track Playing</div>
+        <div class="track-artist">Click ENTER to begin</div>
+      </div>
     </div>
-    <div class="progress-container">
-      <div class="progress-bar"></div>
-    </div>
-    <div class="volume-control">
-      <label for="volumeSlider">Volume</label>
-      <input type="range" id="volumeSlider" min="0" max="100" value="50">
+    <div class="now-playing-right">
+      <div class="progress-container">
+        <div class="progress-bar"></div>
+      </div>
+      <div class="volume-control">
+        <label for="volumeSlider">Vol</label>
+        <input type="range" id="volumeSlider" min="0" max="100" value="50">
+      </div>
     </div>
   </div>
 
-  <div id="modalContainer" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center;"></div>
-
-  <div id="minimap" style="position:fixed;top:10px;right:10px;z-index:100;">
-    <canvas id="minimapCanvas" width="120" height="90" style="background:#111118;border:1px solid #FFD700;border-radius:4px;"></canvas>
-    <div id="minimapLabel" style="color:#FFD700;font-size:10px;text-align:center;font-family:monospace;margin-top:2px;"></div>
+  <!-- Mobile controls -->
+  <div id="mobileControls" style="display:none">
+    <div id="joystickArea" class="joystick-area">
+      <div class="joystick-base">
+        <div id="joystickKnob" class="joystick-knob"></div>
+      </div>
+    </div>
+    <button id="mobileInteractBtn" class="mobile-interact-btn">E</button>
   </div>
 
-  <script src="https://w.soundcloud.com/player/api.js"></script>
   <script src="js/game.js"></script>
   <script src="js/rooms.js"></script>
   <script src="js/input.js"></script>

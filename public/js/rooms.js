@@ -23,7 +23,7 @@
           label: 'RELEASES',
           target: 'releases',
           targetSpawnX: 80, targetSpawnY: 200,
-          color: '#FFD700'
+          color: '#00d4ff'
         },
         {
           id: 'vip',
@@ -32,15 +32,7 @@
           target: 'vip',
           targetSpawnX: 80, targetSpawnY: 200,
           color: '#e94560'
-        },
-        {
-          id: 'rooftop',
-          x: 400, y: 30, w: 60, h: 40,
-          label: 'ROOFTOP',
-          target: 'rooftop',
-          targetSpawnX: 350, targetSpawnY: 400,
-          color: '#FFD700'
-        },
+        }
       ],
       interactables: [],
       npcs: 'crowd', // use the main crowd NPC system
@@ -66,6 +58,13 @@
         }
       ],
       interactables: [
+        {
+          id: 'demo_drop',
+          x: 150, y: 100, w: 80, h: 50,
+          label: 'Demo Drop Box',
+          type: 'demo_drop',
+          promptText: 'Press E to drop a demo'
+        },
         {
           id: 'bookings',
           x: 350, y: 80, w: 70, h: 50,
@@ -113,7 +112,6 @@
             artist: 'Revilo & Longfield',
             date: '2025',
             artwork: null,
-            isReal: true,
             links: {
               spotify: 'https://open.spotify.com',
               youtube: 'https://youtube.com',
@@ -132,7 +130,6 @@
             artist: 'Revilo & Longfield',
             date: '2024',
             artwork: null,
-            isReal: false,
             links: {
               spotify: 'https://open.spotify.com',
               youtube: 'https://youtube.com',
@@ -151,7 +148,6 @@
             artist: 'Revilo & Longfield',
             date: '2024',
             artwork: null,
-            isReal: false,
             links: {
               spotify: 'https://open.spotify.com',
               youtube: 'https://youtube.com',
@@ -170,7 +166,6 @@
             artist: 'Revilo & Longfield',
             date: '2023',
             artwork: null,
-            isReal: false,
             links: {
               spotify: 'https://open.spotify.com',
               youtube: 'https://youtube.com',
@@ -189,7 +184,6 @@
             artist: 'Revilo & Longfield',
             date: '2023',
             artwork: null,
-            isReal: false,
             links: {
               spotify: 'https://open.spotify.com',
               youtube: 'https://youtube.com',
@@ -271,55 +265,6 @@
       hasDJ: false,
       hasLightshow: false,
       theme: 'vip'
-    },
-
-    rooftop: {
-      name: 'Rooftop',
-      width: 700,
-      height: 500,
-      spawnX: 350,
-      spawnY: 400,
-      doors: [
-        {
-          id: 'back_to_club_roof',
-          x: 320, y: 460, w: 60, h: 40,
-          label: 'BACK TO CLUB',
-          target: 'main',
-          targetSpawnX: 400, targetSpawnY: 300,
-          color: '#f0f0f0'
-        }
-      ],
-      interactables: [
-        {
-          id: 'bio',
-          x: 150, y: 80, w: 80, h: 50,
-          label: 'Bio',
-          type: 'bio',
-          promptText: 'Press E to read bio'
-        },
-        {
-          id: 'photos',
-          x: 350, y: 80, w: 80, h: 50,
-          label: 'Photos',
-          type: 'photo_gallery',
-          promptText: 'Press E to view photos'
-        },
-        {
-          id: 'epk',
-          x: 550, y: 80, w: 80, h: 50,
-          label: 'EPK',
-          type: 'epk',
-          promptText: 'Press E to view EPK'
-        }
-      ],
-      npcs: [
-        { id: 'rf_npc_0', x: 200, y: 250, color: '#c0a0e0', state: 'idle', facingDx: 1, facingDy: 0 },
-        { id: 'rf_npc_1', x: 500, y: 300, color: '#80d0b0', state: 'idle', facingDx: -1, facingDy: 0 }
-      ],
-      hasBar: false,
-      hasDJ: false,
-      hasLightshow: false,
-      theme: 'rooftop'
     }
   };
 
