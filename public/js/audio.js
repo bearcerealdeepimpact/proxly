@@ -53,10 +53,12 @@
     setupAudioHandlers(audio);
     setupAudioHandlers(audioAlt);
 
-    ambientAudio = new Audio();
-    ambientAudio.preload = 'auto';
-    ambientAudio.loop = true;
-    ambientAudio.src = '/audio/ambient-crowd.mp3';
+    // Ambient audio disabled — placeholder file was a duplicate of the music track.
+    // To re-enable, replace /audio/ambient-crowd.mp3 with actual crowd noise and uncomment.
+    // ambientAudio = new Audio();
+    // ambientAudio.preload = 'auto';
+    // ambientAudio.loop = true;
+    // ambientAudio.src = '/audio/ambient-crowd.mp3';
 
     var volumeSlider = document.getElementById('volumeSlider');
     if (volumeSlider) {
