@@ -2344,6 +2344,68 @@
     drawRaisedBlockGradient(t, h - t, w - 2 * t, t, elev, wallTopColor, wallFrontColor, wallSideColor);
   }
 
+  function drawBackstageRoom() {
+    // 1. Dark industrial floor
+    drawSubRoomFloor('#1a1a1c');
+
+    // 2. Brownish-tinted walls (back + left)
+    drawSubRoomWalls('#3a3028', '#2a2018', darkenColor('#2a2018', 0.7));
+
+    // 3. Warm amber spotlight in center
+    var center = worldToScreen(300, 200);
+    var spotRadius = 180 * TILE_SCALE;
+    var spotGrad = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, spotRadius);
+    spotGrad.addColorStop(0, 'rgba(255,180,80,0.15)');
+    spotGrad.addColorStop(0.6, 'rgba(255,150,50,0.06)');
+    spotGrad.addColorStop(1, 'rgba(255,150,50,0)');
+    ctx.fillStyle = spotGrad;
+    ctx.fillRect(center.x - spotRadius, center.y - spotRadius, spotRadius * 2, spotRadius * 2);
+
+    // 4. Flight case blocks (dark gray equipment cases)
+    drawRaisedBlockGradient(80, 60, 70, 40, 18, '#2a2a2a', '#222222', '#1a1a1a');
+    drawRaisedBlockGradient(450, 80, 60, 35, 14, '#2c2c2c', '#242424', '#1c1c1c');
+    drawRaisedBlockGradient(120, 280, 55, 30, 12, '#282828', '#202020', '#181818');
+
+    // 5. Cable coil circles on floor
+    var coils = [
+      { x: 200, y: 150 },
+      { x: 400, y: 300 },
+      { x: 150, y: 320 }
+    ];
+    for (var i = 0; i < coils.length; i++) {
+      var cs = worldToScreen(coils[i].x, coils[i].y);
+      ctx.strokeStyle = '#2a2a2a';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cs.x, cs.y, 8 * TILE_SCALE, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = '#232323';
+      ctx.beginPath();
+      ctx.arc(cs.x, cs.y, 5 * TILE_SCALE, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // 6. Interactable markers (demo_drop and bookings positions)
+    var markers = [
+      { x: 300, y: 120, label: 'Demo Drop' },
+      { x: 480, y: 200, label: 'Bookings' }
+    ];
+    var pulseAlpha = 0.4 + 0.3 * Math.sin(animTime / 600);
+    for (var m = 0; m < markers.length; m++) {
+      var ms = worldToScreen(markers[m].x, markers[m].y);
+      ctx.save();
+      ctx.globalAlpha = pulseAlpha;
+      ctx.fillStyle = 'rgba(255,180,80,0.3)';
+      ctx.beginPath();
+      ctx.arc(ms.x, ms.y, 10 * TILE_SCALE, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Front walls (right + bottom)
+    drawSubRoomFrontWalls('#3a3028', '#2a2018', darkenColor('#2a2018', 0.7));
+  }
+
   function drawDoors() {
     if (typeof Rooms === 'undefined' || !Rooms.getRoomDoors || !Game.currentRoom) {
       return;
