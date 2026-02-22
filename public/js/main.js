@@ -25,6 +25,7 @@
 
     Renderer.init(canvas);
     Input.init(canvas);
+    Audio.init();
     Network.connect();
 
     nameSubmit.addEventListener('click', handleNameSubmit);
@@ -116,6 +117,7 @@
 
   function render() {
     Renderer.render();
+    Audio.updateNowPlayingUI();
   }
 
   document.addEventListener('DOMContentLoaded', init);

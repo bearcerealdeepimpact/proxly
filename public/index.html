@@ -25,8 +25,31 @@
     </div>
   </div>
 
+  <div id="autoplayOverlay" class="overlay" style="display:none;">
+    <div class="overlay-content">
+      <h2>Click to Play</h2>
+      <p>Browser requires user interaction to play audio</p>
+      <button id="autoplayUnlockBtn">Click to Play</button>
+    </div>
+  </div>
+
+  <div id="nowPlaying">
+    <div class="now-playing-info">
+      <div class="track-title">No Track Playing</div>
+      <div class="track-artist">Select a track to begin</div>
+    </div>
+    <div class="progress-container">
+      <div class="progress-bar"></div>
+    </div>
+    <div class="volume-control">
+      <label for="volumeSlider">Volume</label>
+      <input type="range" id="volumeSlider" min="0" max="100" value="50">
+    </div>
+  </div>
+
   <script src="js/game.js"></script>
   <script src="js/input.js"></script>
+  <script src="js/audio.js"></script>
   <script src="js/network.js"></script>
   <script src="js/renderer.js"></script>
   <script src="js/main.js"></script>

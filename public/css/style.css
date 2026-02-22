@@ -152,3 +152,62 @@ canvas {
   background-color: #e94560;
   transition: width 0.1s linear;
 }
+
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.volume-control label {
+  font-size: 0.875rem;
+  color: #a0a0b8;
+  min-width: 60px;
+}
+
+.volume-control input[type="range"] {
+  flex: 1;
+  max-width: 200px;
+  height: 4px;
+  border-radius: 2px;
+  background-color: #0a0a1a;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.volume-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: #e94560;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.volume-control input[type="range"]::-webkit-slider-thumb:hover {
+  background-color: #ff5570;
+}
+
+.volume-control input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: #e94560;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s;
+}
+
+.volume-control input[type="range"]::-moz-range-thumb:hover {
+  background-color: #ff5570;
+}
+
+.volume-control input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background-color: #0a0a1a;
+}

@@ -125,6 +125,14 @@
       case 'drink_kicked':
         Game.updateGroundDrinkVelocity(msg.drinkId, msg.vx, msg.vy);
         break;
+
+      case 'music_state':
+        Audio.handleMusicState(msg);
+        break;
+
+      case 'music_sync':
+        Audio.handleMusicSync(msg);
+        break;
     }
   }
 

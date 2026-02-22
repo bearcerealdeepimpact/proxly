@@ -77,7 +77,9 @@ Do not use copyrighted music without proper licensing!
 
 ## Current Playlist
 
-The current `playlist.json` contains placeholder track entries. You need to add the actual MP3 files to make them playable. The playlist will loop automatically once all tracks have played.
+The current `playlist.json` contains placeholder track entries with **silent MP3 files**. These are minimal valid MP3 files that allow the audio system to function but contain no actual music.
+
+**⚠️ IMPORTANT:** Replace these silent placeholder files with actual music tracks for the full experience. The playlist will loop automatically once all tracks have played.
 
 ## Troubleshooting
 
