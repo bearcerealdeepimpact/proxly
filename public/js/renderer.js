@@ -2722,6 +2722,82 @@
     initPatternCache();
   }
 
+  function drawMinimap(room, players, localPlayerId) {
+    var mc = document.getElementById('minimapCanvas');
+    if (!mc) return;
+    var mctx = mc.getContext('2d');
+    var mw = mc.width;
+    var mh = mc.height;
+
+    // Clear and fill dark background
+    mctx.fillStyle = '#111118';
+    mctx.fillRect(0, 0, mw, mh);
+
+    if (!room) return;
+
+    // Scale room to fit canvas with padding
+    var pad = 6;
+    var scaleX = (mw - pad * 2) / room.width;
+    var scaleY = (mh - pad * 2) / room.height;
+    var scale = Math.min(scaleX, scaleY);
+    var ox = pad + ((mw - pad * 2) - room.width * scale) / 2;
+    var oy = pad + ((mh - pad * 2) - room.height * scale) / 2;
+
+    // Draw room outline
+    mctx.strokeStyle = '#444450';
+    mctx.lineWidth = 1;
+    mctx.strokeRect(ox, oy, room.width * scale, room.height * scale);
+
+    // Draw doors as colored dots
+    var doors = room.doors || [];
+    for (var i = 0; i < doors.length; i++) {
+      var d = doors[i];
+      mctx.fillStyle = d.color || '#888888';
+      mctx.beginPath();
+      mctx.arc(
+        ox + (d.x + d.w / 2) * scale,
+        oy + (d.y + d.h / 2) * scale,
+        3, 0, Math.PI * 2
+      );
+      mctx.fill();
+    }
+
+    // Draw interactable objects as small white squares
+    var objs = room.interactables || [];
+    for (var j = 0; j < objs.length; j++) {
+      var obj = objs[j];
+      mctx.fillStyle = '#ffffff';
+      mctx.fillRect(
+        ox + (obj.x + obj.w / 2) * scale - 2,
+        oy + (obj.y + obj.h / 2) * scale - 2,
+        4, 4
+      );
+    }
+
+    // Draw players
+    if (players) {
+      for (var pid in players) {
+        if (!players.hasOwnProperty(pid)) continue;
+        var p = players[pid];
+        var isLocal = pid === localPlayerId;
+        mctx.fillStyle = isLocal ? '#ffffff' : '#aaaaaa';
+        mctx.beginPath();
+        mctx.arc(
+          ox + p.x * scale,
+          oy + p.y * scale,
+          isLocal ? 3 : 2, 0, Math.PI * 2
+        );
+        mctx.fill();
+      }
+    }
+
+    // Update minimap label
+    var label = document.getElementById('minimapLabel');
+    if (label) {
+      label.textContent = room.name || '';
+    }
+  }
+
   function onRoomChange(roomId) {
     // Recalculate tile scale and centering offsets for the new room
     zoomLevel = 1.0;
@@ -2742,6 +2818,7 @@
     drawPlayer: drawPlayer,
     setZoom: setZoom,
     getZoom: getZoom,
-    onRoomChange: onRoomChange
+    onRoomChange: onRoomChange,
+    drawMinimap: drawMinimap
   };
 })();
