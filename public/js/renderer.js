@@ -2280,6 +2280,352 @@
     return drawables;
   }
 
+  function drawSubRoomFloor(floorColor) {
+    var C = Game.CONSTANTS;
+    var points = worldRectToIsoDiamond(0, 0, C.WORLD_WIDTH, C.WORLD_HEIGHT);
+
+    // Clip to diamond and fill with solid color
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (var i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.closePath();
+    ctx.clip();
+
+    ctx.fillStyle = floorColor;
+
+    // Fill bounding box of diamond
+    var bx = Math.min(points[0].x, points[1].x, points[2].x, points[3].x);
+    var by = Math.min(points[0].y, points[1].y, points[2].y, points[3].y);
+    var bx2 = Math.max(points[0].x, points[1].x, points[2].x, points[3].x);
+    var by2 = Math.max(points[0].y, points[1].y, points[2].y, points[3].y);
+    ctx.fillRect(bx, by, bx2 - bx, by2 - by);
+    ctx.restore();
+
+    // Floor outline
+    ctx.strokeStyle = darkenColor(floorColor, 0.6);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (var j = 1; j < points.length; j++) {
+      ctx.lineTo(points[j].x, points[j].y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  function drawSubRoomWalls(wallTopColor, wallFrontColor, wallSideColor) {
+    var C = Game.CONSTANTS;
+    var t = LAYOUT.WALL_THICKNESS;
+    var w = C.WORLD_WIDTH;
+    var h = C.WORLD_HEIGHT;
+    var elev = LAYOUT.WALL_HEIGHT;
+
+    // Back wall (top edge)
+    drawRaisedBlockGradient(0, 0, w, t, elev, wallTopColor, wallFrontColor, wallSideColor);
+
+    // Left wall (left edge)
+    drawRaisedBlockGradient(0, t, t, h - t, elev, wallTopColor, wallFrontColor, wallSideColor);
+  }
+
+  function drawSubRoomFrontWalls(wallTopColor, wallFrontColor, wallSideColor) {
+    var C = Game.CONSTANTS;
+    var t = LAYOUT.WALL_THICKNESS;
+    var w = C.WORLD_WIDTH;
+    var h = C.WORLD_HEIGHT;
+    var elev = LAYOUT.WALL_HEIGHT;
+
+    // Right wall
+    drawRaisedBlockGradient(w - t, t, t, h - t, elev, wallTopColor, wallFrontColor, wallSideColor);
+
+    // Bottom wall
+    drawRaisedBlockGradient(t, h - t, w - 2 * t, t, elev, wallTopColor, wallFrontColor, wallSideColor);
+  }
+
+  function drawBackstageRoom() {
+    // 1. Dark industrial floor
+    drawSubRoomFloor('#1a1a1c');
+
+    // 2. Brownish-tinted walls (back + left)
+    drawSubRoomWalls('#3a3028', '#2a2018', darkenColor('#2a2018', 0.7));
+
+    // 3. Warm amber spotlight in center
+    var center = worldToScreen(300, 200);
+    var spotRadius = 180 * TILE_SCALE;
+    var spotGrad = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, spotRadius);
+    spotGrad.addColorStop(0, 'rgba(255,180,80,0.15)');
+    spotGrad.addColorStop(0.6, 'rgba(255,150,50,0.06)');
+    spotGrad.addColorStop(1, 'rgba(255,150,50,0)');
+    ctx.fillStyle = spotGrad;
+    ctx.fillRect(center.x - spotRadius, center.y - spotRadius, spotRadius * 2, spotRadius * 2);
+
+    // 4. Flight case blocks (dark gray equipment cases)
+    drawRaisedBlockGradient(80, 60, 70, 40, 18, '#2a2a2a', '#222222', '#1a1a1a');
+    drawRaisedBlockGradient(450, 80, 60, 35, 14, '#2c2c2c', '#242424', '#1c1c1c');
+    drawRaisedBlockGradient(120, 280, 55, 30, 12, '#282828', '#202020', '#181818');
+
+    // 5. Cable coil circles on floor
+    var coils = [
+      { x: 200, y: 150 },
+      { x: 400, y: 300 },
+      { x: 150, y: 320 }
+    ];
+    for (var i = 0; i < coils.length; i++) {
+      var cs = worldToScreen(coils[i].x, coils[i].y);
+      ctx.strokeStyle = '#2a2a2a';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cs.x, cs.y, 8 * TILE_SCALE, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = '#232323';
+      ctx.beginPath();
+      ctx.arc(cs.x, cs.y, 5 * TILE_SCALE, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // 6. Interactable markers (demo_drop and bookings positions)
+    var markers = [
+      { x: 300, y: 120, label: 'Demo Drop' },
+      { x: 480, y: 200, label: 'Bookings' }
+    ];
+    var pulseAlpha = 0.4 + 0.3 * Math.sin(animTime / 600);
+    for (var m = 0; m < markers.length; m++) {
+      var ms = worldToScreen(markers[m].x, markers[m].y);
+      ctx.save();
+      ctx.globalAlpha = pulseAlpha;
+      ctx.fillStyle = 'rgba(255,180,80,0.3)';
+      ctx.beginPath();
+      ctx.arc(ms.x, ms.y, 10 * TILE_SCALE, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Front walls (right + bottom)
+    drawSubRoomFrontWalls('#3a3028', '#2a2018', darkenColor('#2a2018', 0.7));
+  }
+
+  function drawReleasesRoom() {
+    // 1. Warm wooden floor
+    drawSubRoomFloor('#2a2218');
+
+    // 2. Wood-tone walls (back + left)
+    drawSubRoomWalls('#4a3828', '#3a2818', darkenColor('#3a2818', 0.7));
+
+    // 3. Warm overhead radial gradient light
+    var center = worldToScreen(300, 200);
+    var lightRadius = 200 * TILE_SCALE;
+    var lightGrad = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, lightRadius);
+    lightGrad.addColorStop(0, 'rgba(255,200,120,0.18)');
+    lightGrad.addColorStop(0.5, 'rgba(255,180,100,0.08)');
+    lightGrad.addColorStop(1, 'rgba(255,180,100,0)');
+    ctx.fillStyle = lightGrad;
+    ctx.fillRect(center.x - lightRadius, center.y - lightRadius, lightRadius * 2, lightRadius * 2);
+
+    // 4. Shelf blocks on left wall
+    drawRaisedBlockGradient(20, 40, 30, 80, 22, '#5a4430', '#4a3420', '#3a2818');
+    drawRaisedBlockGradient(20, 140, 30, 80, 22, '#584230', '#483220', '#382616');
+
+    // 5. Shelf blocks on right wall
+    drawRaisedBlockGradient(550, 40, 30, 80, 22, '#5a4430', '#4a3420', '#3a2818');
+    drawRaisedBlockGradient(550, 140, 30, 80, 22, '#584230', '#483220', '#382616');
+
+    // 6. Vinyl crate squares at release interactable positions
+    var crates = [
+      { x: 120, y: 100 },
+      { x: 250, y: 100 },
+      { x: 380, y: 100 },
+      { x: 180, y: 250 },
+      { x: 420, y: 250 }
+    ];
+    var pulseAlpha = 0.4 + 0.3 * Math.sin(animTime / 600);
+    for (var i = 0; i < crates.length; i++) {
+      drawRaisedBlockGradient(crates[i].x - 15, crates[i].y - 15, 30, 30, 8, '#3a3020', '#2a2218', '#221a10');
+      // Pulsing interactable indicator
+      var cs = worldToScreen(crates[i].x, crates[i].y);
+      ctx.save();
+      ctx.globalAlpha = pulseAlpha;
+      ctx.fillStyle = 'rgba(255,200,120,0.3)';
+      ctx.beginPath();
+      ctx.arc(cs.x, cs.y, 10 * TILE_SCALE, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 7. Turntable desk decoration (center-right area)
+    drawRaisedBlockGradient(400, 300, 80, 40, 16, '#4a3828', '#3a2818', '#2a1a10');
+    // Turntable platter circle on top
+    var deskCenter = worldToScreen(440, 320);
+    var platterY = deskCenter.y - 16 * HEIGHT_SCALE;
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath();
+    ctx.ellipse(deskCenter.x, platterY, 14 * TILE_SCALE, 14 * TILE_SCALE * SIN_A, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#333333';
+    ctx.beginPath();
+    ctx.ellipse(deskCenter.x, platterY, 3 * TILE_SCALE, 3 * TILE_SCALE * SIN_A, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Front walls (right + bottom)
+    drawSubRoomFrontWalls('#4a3828', '#3a2818', darkenColor('#3a2818', 0.7));
+  }
+
+  function drawVIPRoom() {
+    // 1. Deep purple floor
+    drawSubRoomFloor('#1a0a28');
+
+    // 2. Velvet purple walls (back + left)
+    drawSubRoomWalls('#3a1a4a', '#2a1038', darkenColor('#2a1038', 0.7));
+
+    // 3. Neon sign rectangles at social_link interactable positions
+    var neonSigns = [
+      { x: 100, y: 80, w: 50, h: 14, color: '#ff00ff' },
+      { x: 250, y: 80, w: 50, h: 14, color: '#00ffff' },
+      { x: 400, y: 80, w: 50, h: 14, color: '#ff4488' }
+    ];
+    var neonPulse = 0.6 + 0.4 * Math.sin(animTime / 400);
+    for (var i = 0; i < neonSigns.length; i++) {
+      var sign = neonSigns[i];
+      var signCenter = worldToScreen(sign.x + sign.w / 2, sign.y + sign.h / 2);
+      var signElev = 28 * HEIGHT_SCALE;
+      // Neon glow
+      ctx.save();
+      ctx.globalAlpha = neonPulse * 0.5;
+      ctx.fillStyle = sign.color;
+      ctx.shadowColor = sign.color;
+      ctx.shadowBlur = 18 * TILE_SCALE;
+      var nw = sign.w * TILE_SCALE * 0.6;
+      var nh = sign.h * TILE_SCALE * 0.4;
+      ctx.fillRect(signCenter.x - nw / 2, signCenter.y - signElev - nh / 2, nw, nh);
+      ctx.restore();
+      // Solid neon rectangle
+      ctx.save();
+      ctx.globalAlpha = neonPulse;
+      ctx.strokeStyle = sign.color;
+      ctx.lineWidth = 2;
+      ctx.shadowColor = sign.color;
+      ctx.shadowBlur = 10 * TILE_SCALE;
+      ctx.strokeRect(signCenter.x - nw / 2, signCenter.y - signElev - nh / 2, nw, nh);
+      ctx.restore();
+    }
+
+    // 4. Plush seating blocks (low wide dark purple)
+    drawRaisedBlockGradient(60, 180, 100, 35, 8, '#2a1040', '#220c38', '#1a0828');
+    drawRaisedBlockGradient(350, 180, 100, 35, 8, '#2a1040', '#220c38', '#1a0828');
+    drawRaisedBlockGradient(60, 280, 100, 35, 8, '#281040', '#200c36', '#180826');
+    drawRaisedBlockGradient(350, 280, 100, 35, 8, '#281040', '#200c36', '#180826');
+
+    // 5. Guest book table (small raised block)
+    drawRaisedBlockGradient(220, 240, 60, 40, 16, '#3a1a4a', '#2a1038', '#1a0828');
+
+    // 6. Purple ambient glow radial gradient
+    var center = worldToScreen(250, 200);
+    var glowRadius = 220 * TILE_SCALE;
+    var glowGrad = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, glowRadius);
+    glowGrad.addColorStop(0, 'rgba(120,40,180,0.14)');
+    glowGrad.addColorStop(0.5, 'rgba(100,20,160,0.06)');
+    glowGrad.addColorStop(1, 'rgba(80,10,140,0)');
+    ctx.fillStyle = glowGrad;
+    ctx.fillRect(center.x - glowRadius, center.y - glowRadius, glowRadius * 2, glowRadius * 2);
+
+    // Front walls (right + bottom)
+    drawSubRoomFrontWalls('#3a1a4a', '#2a1038', darkenColor('#2a1038', 0.7));
+  }
+
+  function drawDoors() {
+    if (typeof Rooms === 'undefined' || !Rooms.getRoomDoors || !Game.currentRoom) {
+      return;
+    }
+
+    var doors = Rooms.getRoomDoors(Game.currentRoom);
+    if (!doors || doors.length === 0) {
+      return;
+    }
+
+    var pulseAlpha = 0.4 + 0.3 * Math.sin(animTime / 500);
+
+    for (var i = 0; i < doors.length; i++) {
+      var door = doors[i];
+      var pts = worldRectToIsoDiamond(door.x, door.y, door.w, door.h);
+
+      // Draw glowing door frame
+      ctx.save();
+      ctx.globalAlpha = pulseAlpha;
+      ctx.strokeStyle = door.color || '#44ccff';
+      ctx.lineWidth = 3;
+      ctx.shadowColor = door.color || '#44ccff';
+      ctx.shadowBlur = 12;
+
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (var j = 1; j < pts.length; j++) {
+        ctx.lineTo(pts[j].x, pts[j].y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+
+      // Fill with subtle tint
+      ctx.globalAlpha = pulseAlpha * 0.2;
+      ctx.fillStyle = door.color || '#44ccff';
+      ctx.fill();
+
+      ctx.restore();
+
+      // Label text above the frame
+      if (door.label) {
+        var centerX = (pts[0].x + pts[1].x + pts[2].x + pts[3].x) / 4;
+        var topY = Math.min(pts[0].y, pts[1].y, pts[2].y, pts[3].y);
+
+        ctx.save();
+        ctx.globalAlpha = pulseAlpha + 0.2;
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#000000';
+        ctx.fillText(door.label, centerX, topY - 6);
+        ctx.fillStyle = door.color || '#44ccff';
+        ctx.fillText(door.label, centerX, topY - 7);
+        ctx.restore();
+      }
+    }
+  }
+
+  function drawInteractionPrompt() {
+    if (typeof Interaction === 'undefined' || !Interaction.getActivePrompt) {
+      return;
+    }
+
+    var prompt = Interaction.getActivePrompt();
+    if (!prompt) {
+      return;
+    }
+
+    var player = Game.localPlayer;
+    if (!player) {
+      return;
+    }
+
+    var screen = worldToScreen(player.x, player.y);
+    var fontSize = Math.max(10, Math.round(12 * zoomLevel));
+    ctx.font = 'bold ' + fontSize + 'px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    var promptY = screen.y - 40 * TILE_SCALE;
+
+    var text = prompt.text || 'Press E';
+    var textW = ctx.measureText(text).width;
+
+    // Background pill
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.beginPath();
+    ctx.roundRect(screen.x - textW / 2 - 6, promptY - fontSize - 4, textW + 12, fontSize + 8, 4);
+    ctx.fill();
+
+    // Prompt text
+    ctx.fillStyle = prompt.color || '#ffffff';
+    ctx.fillText(text, screen.x, promptY);
+  }
+
   function render() {
     if (!ctx) {
       return;
@@ -2299,35 +2645,33 @@
     ctx.fillStyle = '#0d0d0f';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 2. Floor (concrete)
-    drawFloor();
+    var room = Game.currentRoom || 'main';
 
-    // 3. Walls (back + left, concrete gray, no brick)
-    drawWalls();
+    // 2. Room-specific background rendering (floor, walls, environment)
+    if (room === 'main') {
+      // Main club full pipeline
+      drawFloor();
+      drawWalls();
+      drawExposedPipes();
+      drawLEDWall();
+      drawDJBooth();
+      drawDanceFloor();
+      drawLEDWallGlow();
+      drawAtmosphericLights();
+      drawSpeakerStack(LAYOUT.SPEAKER_LEFT.x, LAYOUT.SPEAKER_LEFT.y);
+      drawSpeakerStack(LAYOUT.SPEAKER_RIGHT.x, LAYOUT.SPEAKER_RIGHT.y);
+    } else if (room === 'backstage') {
+      drawBackstageRoom();
+    } else if (room === 'releases') {
+      drawReleasesRoom();
+    } else if (room === 'vip') {
+      drawVIPRoom();
+    }
 
-    // 4. Exposed pipes on back wall
-    drawExposedPipes();
+    // 3. Doors (rendered in all rooms)
+    drawDoors();
 
-    // 5. LED wall behind booth (animated color panels)
-    drawLEDWall();
-
-    // 6. DJ Booth (platform + desk + equipment + LEDs + spotlight)
-    drawDJBooth();
-
-    // 7. Dance floor (expanded, muted)
-    drawDanceFloor();
-
-    // 8. LED wall glow wash onto dance floor
-    drawLEDWallGlow();
-
-    // 9. Atmospheric lights (pulsing red/blue)
-    drawAtmosphericLights();
-
-    // 8. Speaker stacks at booth flanks
-    drawSpeakerStack(LAYOUT.SPEAKER_LEFT.x, LAYOUT.SPEAKER_LEFT.y);
-    drawSpeakerStack(LAYOUT.SPEAKER_RIGHT.x, LAYOUT.SPEAKER_RIGHT.y);
-
-    // 9. Depth-sorted: standing tables, bar, DJ NPC, players
+    // 4. Depth-sorted drawables (tables, bar, DJ, players, etc.)
     var drawables = buildDrawables();
     for (var i = 0; i < drawables.length; i++) {
       var d = drawables[i];
@@ -2346,20 +2690,42 @@
       }
     }
 
-    // 10. Front walls (right + bottom)
-    drawFrontWalls();
+    // 5. Front walls (dispatch by room)
+    if (room === 'main') {
+      drawFrontWalls();
+    } else if (room === 'backstage') {
+      drawSubRoomFrontWalls('#3a3028', '#2a2018', darkenColor('#2a2018', 0.7));
+    } else if (room === 'releases') {
+      drawSubRoomFrontWalls('#4a3828', '#3a2818', darkenColor('#3a2818', 0.7));
+    } else if (room === 'vip') {
+      drawSubRoomFrontWalls('#3a1a4a', '#2a1038', darkenColor('#2a1038', 0.7));
+    }
 
-    // 11. Vignette (heavy)
+    // 6. Vignette (all rooms)
     drawVignette();
 
-    // 11.5. Drink prompts / HUD (after vignette, before strobe)
+    // 7. Drink prompts / HUD (after vignette)
     drawDrinkPrompt();
 
-    // 12. Strobe (buildup only, screen overlay)
-    drawStrobe();
+    // 8. Interaction prompts (all rooms)
+    drawInteractionPrompt();
 
-    // 13. Zoom indicator
+    // 9. Strobe (main room only)
+    if (room === 'main') {
+      drawStrobe();
+    }
+
+    // 10. Zoom indicator (all rooms)
     drawZoomIndicator();
+
+    // 11. Minimap (all rooms)
+    var minimapRoom = (typeof Rooms !== 'undefined' && Rooms.getRoom) ? Rooms.getRoom(room) : null;
+    var minimapPlayers = Game.getAllPlayers ? Game.getAllPlayers() : {};
+    var minimapLocalId = localPlayer ? localPlayer.id : null;
+    drawMinimap(minimapRoom, minimapPlayers, minimapLocalId);
+
+    // 12. Transition overlay (all rooms)
+    drawTransitionOverlay();
   }
 
   function init(canvasElement) {
@@ -2373,12 +2739,115 @@
     initPatternCache();
   }
 
+  function drawMinimap(room, players, localPlayerId) {
+    var mc = document.getElementById('minimapCanvas');
+    if (!mc) return;
+    var mctx = mc.getContext('2d');
+    var mw = mc.width;
+    var mh = mc.height;
+
+    // Clear and fill dark background
+    mctx.fillStyle = '#111118';
+    mctx.fillRect(0, 0, mw, mh);
+
+    if (!room) return;
+
+    // Scale room to fit canvas with padding
+    var pad = 6;
+    var scaleX = (mw - pad * 2) / room.width;
+    var scaleY = (mh - pad * 2) / room.height;
+    var scale = Math.min(scaleX, scaleY);
+    var ox = pad + ((mw - pad * 2) - room.width * scale) / 2;
+    var oy = pad + ((mh - pad * 2) - room.height * scale) / 2;
+
+    // Draw room outline
+    mctx.strokeStyle = '#444450';
+    mctx.lineWidth = 1;
+    mctx.strokeRect(ox, oy, room.width * scale, room.height * scale);
+
+    // Draw doors as colored dots
+    var doors = room.doors || [];
+    for (var i = 0; i < doors.length; i++) {
+      var d = doors[i];
+      mctx.fillStyle = d.color || '#888888';
+      mctx.beginPath();
+      mctx.arc(
+        ox + (d.x + d.w / 2) * scale,
+        oy + (d.y + d.h / 2) * scale,
+        3, 0, Math.PI * 2
+      );
+      mctx.fill();
+    }
+
+    // Draw interactable objects as small white squares
+    var objs = room.interactables || [];
+    for (var j = 0; j < objs.length; j++) {
+      var obj = objs[j];
+      mctx.fillStyle = '#ffffff';
+      mctx.fillRect(
+        ox + (obj.x + obj.w / 2) * scale - 2,
+        oy + (obj.y + obj.h / 2) * scale - 2,
+        4, 4
+      );
+    }
+
+    // Draw players
+    if (players) {
+      for (var pid in players) {
+        if (!players.hasOwnProperty(pid)) continue;
+        var p = players[pid];
+        var isLocal = pid === localPlayerId;
+        mctx.fillStyle = isLocal ? '#ffffff' : '#aaaaaa';
+        mctx.beginPath();
+        mctx.arc(
+          ox + p.x * scale,
+          oy + p.y * scale,
+          isLocal ? 3 : 2, 0, Math.PI * 2
+        );
+        mctx.fill();
+      }
+    }
+
+    // Update minimap label
+    var label = document.getElementById('minimapLabel');
+    if (label) {
+      label.textContent = room.name || '';
+    }
+  }
+
+  function onRoomChange(roomId) {
+    // Recalculate tile scale and centering offsets for the new room
+    zoomLevel = 1.0;
+    recalcOffsets();
+
+    // Clear player tracking caches
+    playerLastPos = {};
+    playerFacing = {};
+    playerWalkPhase = {};
+    playerSpeed = {};
+    playerMoveTime = {};
+  }
+
+  function drawTransitionOverlay() {
+    if (!window.Game || !window.Game.transitioning) return;
+    var alpha = window.Game.transitionAlpha || 0;
+    if (alpha <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  }
+
   window.Renderer = {
     init: init,
     render: render,
     drawClub: drawFloor,
     drawPlayer: drawPlayer,
     setZoom: setZoom,
-    getZoom: getZoom
+    getZoom: getZoom,
+    onRoomChange: onRoomChange,
+    drawMinimap: drawMinimap,
+    drawTransitionOverlay: drawTransitionOverlay
   };
 })();
