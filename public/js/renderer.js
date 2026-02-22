@@ -112,33 +112,33 @@
     SHADOW: 'rgba(0,0,0,0.3)'
   };
 
-  var DJ_X = 400;
+  var DJ_X = 350;
   var DJ_Y = 35;
 
   var LAYOUT = {
     WALL_THICKNESS: 10,
     WALL_HEIGHT: 40,
-    DJ_BOOTH_X: 300,
+    DJ_BOOTH_X: 250,
     DJ_BOOTH_Y: 15,
     DJ_BOOTH_W: 200,
     DJ_BOOTH_H: 60,
     DJ_BOOTH_ELEVATION: 10,
-    DJ_DESK_X: 340,
+    DJ_DESK_X: 290,
     DJ_DESK_Y: 30,
     DJ_DESK_W: 120,
     DJ_DESK_H: 30,
     DJ_DESK_ELEVATION: 5,
-    PA_LEFT_X: 165,
+    PA_LEFT_X: 170,
     PA_LEFT_Y: 14,
-    PA_RIGHT_X: 587,
+    PA_RIGHT_X: 485,
     PA_RIGHT_Y: 14,
     DANCE_FLOOR_X: 100,
     DANCE_FLOOR_Y: 120,
     DANCE_FLOOR_W: 600,
     DANCE_FLOOR_H: 350,
-    BAR_X: 60,
-    BAR_Y: 460,
-    BAR_W: 180,
+    BAR_X: 30,
+    BAR_Y: 420,
+    BAR_W: 200,
     BAR_H: 30,
     BAR_ELEVATION: 18,
     TABLE_RADIUS: 10,
@@ -152,7 +152,7 @@
       { y: 5, xStart: 100, xEnd: 700 },
       { y: 2, xStart: 150, xEnd: 650 }
     ],
-    LED_WALL_X: 240,
+    LED_WALL_X: 190,
     LED_WALL_Y: 10,
     LED_WALL_W: 320,
     LED_WALL_ELEV_BOTTOM: 5,
@@ -1037,10 +1037,10 @@
     var bassPulse = Math.pow(Math.abs(Math.sin(ls.beat * Math.PI)), 6);
 
     // ── Dimensions ──
-    var subW = 30, subD = 18, subH = 13;
-    var cabW = 26, cabD = 7, cabH = 4;
-    var arrayCabs = 5, cabSpacing = 5;
-    var arrayBaseElev = 34;
+    var subW = 44, subD = 26, subH = 18;
+    var cabW = 38, cabD = 10, cabH = 5.5;
+    var arrayCabs = 6, cabSpacing = 6.5;
+    var arrayBaseElev = 46;
 
     // Center line array above subs
     var arrayX = baseX + (subW - cabW) / 2;
@@ -1421,8 +1421,8 @@
 
   // Positions for the duo: Revilo (left CDJ) and Longfield (right CDJ)
   var DJ_DUO = [
-    { wx: 375, wy: 38, color: '#ddddcc', phaseOff: 0 },
-    { wx: 425, wy: 32, color: '#ccccbb', phaseOff: 0.7 }
+    { wx: 325, wy: 38, color: '#ddddcc', phaseOff: 0 },
+    { wx: 375, wy: 32, color: '#ccccbb', phaseOff: 0.7 }
   ];
 
   function drawSingleDJFigure(wx, wy, color, phaseOff) {
@@ -2409,9 +2409,9 @@
 
       // Bartender NPCs (behind the bar)
       var bt1x = L.BAR_X + L.BAR_W * 0.33;
-      var bt1y = L.BAR_Y - 5;
+      var bt1y = L.BAR_Y - 15;
       var bt2x = L.BAR_X + L.BAR_W * 0.67;
-      var bt2y = L.BAR_Y - 5;
+      var bt2y = L.BAR_Y - 15;
       drawables.push({
         type: 'bartender',
         sortKey: bt1x + bt1y,
