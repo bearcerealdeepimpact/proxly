@@ -211,3 +211,52 @@ canvas {
   border-radius: 2px;
   background-color: #0a0a1a;
 }
+
+/* Modal styles */
+.modal-box {
+  background: #1a1a2e;
+  border: 1px solid #FFD700;
+  border-radius: 12px;
+  padding: 30px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  color: #e0e0e0;
+  font-family: 'Arial', sans-serif;
+  position: relative;
+}
+.modal-box h2 {
+  color: #FFD700;
+  margin-bottom: 15px;
+  font-size: 1.4em;
+}
+.modal-box h3 {
+  color: #FFBF00;
+  margin: 12px 0 8px;
+  font-size: 1.1em;
+}
+.modal-box p {
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+.modal-box a {
+  color: #FFD700;
+  text-decoration: none;
+}
+.modal-box a:hover {
+  text-decoration: underline;
+}
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: #FFD700;
+  font-size: 20px;
+  cursor: pointer;
+}
+.modal-close:hover {
+  color: #fff;
+}

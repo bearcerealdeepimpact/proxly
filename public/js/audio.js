@@ -226,6 +226,8 @@
     toggleMute: toggleMute,
     getCurrentTrack: getCurrentTrack,
     getProgress: getProgress,
-    updateNowPlayingUI: updateNowPlayingUI
+    updateNowPlayingUI: updateNowPlayingUI,
+    handleMusicState: function () {},
+    handleMusicSync: function () {}
   };
 })();

@@ -225,6 +225,41 @@
 
   var NPC_COLORS = ['#e06090', '#60b080', '#b080e0', '#e0a050', '#50b0d0', '#d07070', '#70c070', '#a070d0', '#d0b040', '#60a0a0'];
 
+  // ─── Lightshow phase computation ──────────────────────────────────
+  var DANCE_BPM = 140;
+  var DANCE_BEAT_MS = 60000 / DANCE_BPM;
+  var LIGHTSHOW_BAR_MS = DANCE_BEAT_MS * 4;
+  var LIGHTSHOW_PHASES = [
+    { name: "intro", bars: 16 },
+    { name: "breakdown", bars: 16 },
+    { name: "buildup", bars: 8 },
+    { name: "drop", bars: 16 },
+    { name: "outro", bars: 8 }
+  ];
+
+  var LIGHTSHOW_TOTAL_MS = 0;
+  var LIGHTSHOW_PHASE_STARTS = [];
+  (function () {
+    var offset = 0;
+    for (var i = 0; i < LIGHTSHOW_PHASES.length; i++) {
+      LIGHTSHOW_PHASE_STARTS.push(offset);
+      offset += LIGHTSHOW_PHASES[i].bars * LIGHTSHOW_BAR_MS;
+    }
+    LIGHTSHOW_TOTAL_MS = offset;
+  })();
+
+  function getLightshowPhase(time) {
+    var t = time % LIGHTSHOW_TOTAL_MS;
+    for (var i = LIGHTSHOW_PHASES.length - 1; i >= 0; i--) {
+      if (t >= LIGHTSHOW_PHASE_STARTS[i]) {
+        var phaseLen = LIGHTSHOW_PHASES[i].bars * LIGHTSHOW_BAR_MS;
+        var elapsed = t - LIGHTSHOW_PHASE_STARTS[i];
+        return { name: LIGHTSHOW_PHASES[i].name, progress: elapsed / phaseLen };
+      }
+    }
+    return { name: "intro", progress: 0 };
+  }
+
   // Group system: 4 groups (3, 3, 2, 2) with cluster centers on the dance floor
   var NPC_GROUPS = [
     { members: [0, 1, 2], cx: 280, cy: 280, relocateTimer: 0 },
@@ -315,7 +350,12 @@
         facingDx: 0,
         facingDy: -1,
         glanceTimer: 0,
-        glanceDuration: 0
+        glanceDuration: 0,
+        handRaised: false,
+        handRaiseTimer: 0,
+        energy: 0,
+        cheering: false,
+        danceCircleRole: null
       };
       computeDJFacing(npc);
       crowdNPCs.push(npc);
@@ -337,6 +377,9 @@
 
   function updateCrowd(dt) {
     updateGroupCenters(dt);
+
+    // Lightshow-reactive behavior
+    var phase = getLightshowPhase(Date.now());
 
     for (var i = 0; i < crowdNPCs.length; i++) {
       var npc = crowdNPCs[i];
@@ -456,9 +499,78 @@
         npc.facingDy = 0;
       }
 
+
+      // ── Lightshow-reactive energy system ──
+      if (phase.name === "buildup") {
+        npc.energy = Math.min(1, npc.energy + dt * 0.3);
+      } else if (phase.name === "drop") {
+        npc.energy = 1;
+      } else if (phase.name === "outro" || phase.name === "intro") {
+        npc.energy = Math.max(0, npc.energy - dt * 0.15);
+      } else if (phase.name === "breakdown") {
+        npc.energy = Math.max(0.2, npc.energy - dt * 0.05);
+      }
+
+      // ── Hand raising during drop ──
+      if (phase.name === "drop" && npc.energy > 0.7 && !npc.handRaised) {
+        if (Math.random() < 0.05 * dt) {
+          npc.handRaised = true;
+          npc.handRaiseTimer = 2 + Math.random() * 2; // 2-4 seconds
+        }
+      }
+      if (npc.handRaised) {
+        npc.handRaiseTimer -= dt;
+        if (npc.handRaiseTimer <= 0) {
+          npc.handRaised = false;
+          npc.handRaiseTimer = 0;
+        }
+      }
+
+      // ── Cheering during drop ──
+      if (phase.name === "drop" && npc.energy > 0.8) {
+        npc.cheering = true;
+      } else {
+        npc.cheering = false;
+      }
       // Clamp to world bounds
       npc.x = Math.max(20, Math.min(780, npc.x));
       npc.y = Math.max(20, Math.min(580, npc.y));
+    }
+
+    // ── Dance circle logic ──
+    if (phase.name === "drop" && phase.progress > 0.3 && phase.progress < 0.8) {
+      // Check if any NPC is already center
+      var hasCenter = false;
+      for (var dc = 0; dc < crowdNPCs.length; dc++) {
+        if (crowdNPCs[dc].danceCircleRole === "center") { hasCenter = true; break; }
+      }
+      if (!hasCenter) {
+        // Pick a random dancing NPC as center
+        var candidates = [];
+        for (var dc2 = 0; dc2 < crowdNPCs.length; dc2++) {
+          if (crowdNPCs[dc2].state === "dancing") candidates.push(dc2);
+        }
+        if (candidates.length > 0) {
+          var centerIdx = candidates[Math.floor(Math.random() * candidates.length)];
+          var centerNpc = crowdNPCs[centerIdx];
+          centerNpc.danceCircleRole = "center";
+          // Move center NPC to a central dance position
+          centerNpc.targetX = 380 + Math.random() * 40;
+          centerNpc.targetY = 280 + Math.random() * 40;
+          // Mark other NPCs in the same group as ring
+          var centerGroup = centerNpc.groupIndex;
+          for (var dc3 = 0; dc3 < crowdNPCs.length; dc3++) {
+            if (dc3 !== centerIdx && crowdNPCs[dc3].groupIndex === centerGroup && crowdNPCs[dc3].danceCircleRole !== "center") {
+              crowdNPCs[dc3].danceCircleRole = "ring";
+            }
+          }
+        }
+      }
+    } else {
+      // Clear dance circle roles outside active drop window
+      for (var dc4 = 0; dc4 < crowdNPCs.length; dc4++) {
+        crowdNPCs[dc4].danceCircleRole = null;
+      }
     }
   }
 
@@ -483,6 +595,46 @@
     dropDrink: dropDrink,
     kickNearbyDrink: kickNearbyDrink,
     crowdNPCs: crowdNPCs,
-    updateCrowd: updateCrowd
+    updateCrowd: updateCrowd,
+    getLightshowPhase: getLightshowPhase,
+    currentRoom: 'main',
+    transitioning: false,
+    transitionAlpha: 0,
+    transitionToRoom: function (roomId, spawnX, spawnY) {
+      var self = window.Game;
+      if (self.transitioning) return;
+      self.transitioning = true;
+      self.transitionAlpha = 0;
+      var fadeIn = setInterval(function () {
+        self.transitionAlpha += 0.05;
+        if (self.transitionAlpha >= 1) {
+          self.transitionAlpha = 1;
+          clearInterval(fadeIn);
+          // Switch room
+          self.currentRoom = roomId;
+          if (typeof Rooms !== 'undefined' && Rooms.getRoom) {
+            var room = Rooms.getRoom(roomId);
+            if (room) {
+              self.CONSTANTS.WORLD_WIDTH = room.width;
+              self.CONSTANTS.WORLD_HEIGHT = room.height;
+              localPlayer.x = spawnX || room.spawnX;
+              localPlayer.y = spawnY || room.spawnY;
+            }
+          }
+          if (typeof Renderer !== 'undefined' && Renderer.onRoomChange) {
+            Renderer.onRoomChange(roomId);
+          }
+          // Fade out
+          var fadeOut = setInterval(function () {
+            self.transitionAlpha -= 0.05;
+            if (self.transitionAlpha <= 0) {
+              self.transitionAlpha = 0;
+              self.transitioning = false;
+              clearInterval(fadeOut);
+            }
+          }, 30);
+        }
+      }, 30);
+    }
   };
 })();

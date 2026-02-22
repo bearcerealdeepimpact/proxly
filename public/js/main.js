@@ -101,6 +101,11 @@
     // Crowd NPCs move even when player is still
     Game.updateCrowd(deltaTime);
 
+    // Update interaction prompts
+    if (typeof Interaction !== 'undefined' && Interaction.update) {
+      Interaction.update();
+    }
+
     var movement = Input.getMovement();
     if (movement.dx === 0 && movement.dy === 0) {
       return;
