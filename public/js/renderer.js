@@ -2316,6 +2316,34 @@
     ctx.stroke();
   }
 
+  function drawSubRoomWalls(wallTopColor, wallFrontColor, wallSideColor) {
+    var C = Game.CONSTANTS;
+    var t = LAYOUT.WALL_THICKNESS;
+    var w = C.WORLD_WIDTH;
+    var h = C.WORLD_HEIGHT;
+    var elev = LAYOUT.WALL_HEIGHT;
+
+    // Back wall (top edge)
+    drawRaisedBlockGradient(0, 0, w, t, elev, wallTopColor, wallFrontColor, wallSideColor);
+
+    // Left wall (left edge)
+    drawRaisedBlockGradient(0, t, t, h - t, elev, wallTopColor, wallFrontColor, wallSideColor);
+  }
+
+  function drawSubRoomFrontWalls(wallTopColor, wallFrontColor, wallSideColor) {
+    var C = Game.CONSTANTS;
+    var t = LAYOUT.WALL_THICKNESS;
+    var w = C.WORLD_WIDTH;
+    var h = C.WORLD_HEIGHT;
+    var elev = LAYOUT.WALL_HEIGHT;
+
+    // Right wall
+    drawRaisedBlockGradient(w - t, t, t, h - t, elev, wallTopColor, wallFrontColor, wallSideColor);
+
+    // Bottom wall
+    drawRaisedBlockGradient(t, h - t, w - 2 * t, t, elev, wallTopColor, wallFrontColor, wallSideColor);
+  }
+
   function render() {
     if (!ctx) {
       return;
