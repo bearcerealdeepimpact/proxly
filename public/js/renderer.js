@@ -2406,6 +2406,71 @@
     drawSubRoomFrontWalls('#3a3028', '#2a2018', darkenColor('#2a2018', 0.7));
   }
 
+  function drawReleasesRoom() {
+    // 1. Warm wooden floor
+    drawSubRoomFloor('#2a2218');
+
+    // 2. Wood-tone walls (back + left)
+    drawSubRoomWalls('#4a3828', '#3a2818', darkenColor('#3a2818', 0.7));
+
+    // 3. Warm overhead radial gradient light
+    var center = worldToScreen(300, 200);
+    var lightRadius = 200 * TILE_SCALE;
+    var lightGrad = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, lightRadius);
+    lightGrad.addColorStop(0, 'rgba(255,200,120,0.18)');
+    lightGrad.addColorStop(0.5, 'rgba(255,180,100,0.08)');
+    lightGrad.addColorStop(1, 'rgba(255,180,100,0)');
+    ctx.fillStyle = lightGrad;
+    ctx.fillRect(center.x - lightRadius, center.y - lightRadius, lightRadius * 2, lightRadius * 2);
+
+    // 4. Shelf blocks on left wall
+    drawRaisedBlockGradient(20, 40, 30, 80, 22, '#5a4430', '#4a3420', '#3a2818');
+    drawRaisedBlockGradient(20, 140, 30, 80, 22, '#584230', '#483220', '#382616');
+
+    // 5. Shelf blocks on right wall
+    drawRaisedBlockGradient(550, 40, 30, 80, 22, '#5a4430', '#4a3420', '#3a2818');
+    drawRaisedBlockGradient(550, 140, 30, 80, 22, '#584230', '#483220', '#382616');
+
+    // 6. Vinyl crate squares at release interactable positions
+    var crates = [
+      { x: 120, y: 100 },
+      { x: 250, y: 100 },
+      { x: 380, y: 100 },
+      { x: 180, y: 250 },
+      { x: 420, y: 250 }
+    ];
+    var pulseAlpha = 0.4 + 0.3 * Math.sin(animTime / 600);
+    for (var i = 0; i < crates.length; i++) {
+      drawRaisedBlockGradient(crates[i].x - 15, crates[i].y - 15, 30, 30, 8, '#3a3020', '#2a2218', '#221a10');
+      // Pulsing interactable indicator
+      var cs = worldToScreen(crates[i].x, crates[i].y);
+      ctx.save();
+      ctx.globalAlpha = pulseAlpha;
+      ctx.fillStyle = 'rgba(255,200,120,0.3)';
+      ctx.beginPath();
+      ctx.arc(cs.x, cs.y, 10 * TILE_SCALE, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 7. Turntable desk decoration (center-right area)
+    drawRaisedBlockGradient(400, 300, 80, 40, 16, '#4a3828', '#3a2818', '#2a1a10');
+    // Turntable platter circle on top
+    var deskCenter = worldToScreen(440, 320);
+    var platterY = deskCenter.y - 16 * HEIGHT_SCALE;
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath();
+    ctx.ellipse(deskCenter.x, platterY, 14 * TILE_SCALE, 14 * TILE_SCALE * SIN_A, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#333333';
+    ctx.beginPath();
+    ctx.ellipse(deskCenter.x, platterY, 3 * TILE_SCALE, 3 * TILE_SCALE * SIN_A, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Front walls (right + bottom)
+    drawSubRoomFrontWalls('#4a3828', '#3a2818', darkenColor('#3a2818', 0.7));
+  }
+
   function drawDoors() {
     if (typeof Rooms === 'undefined' || !Rooms.getRoomDoors || !Game.currentRoom) {
       return;
