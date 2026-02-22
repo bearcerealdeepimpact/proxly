@@ -2344,6 +2344,63 @@
     drawRaisedBlockGradient(t, h - t, w - 2 * t, t, elev, wallTopColor, wallFrontColor, wallSideColor);
   }
 
+  function drawDoors() {
+    if (typeof Rooms === 'undefined' || !Rooms.getRoomDoors || !Game.currentRoom) {
+      return;
+    }
+
+    var doors = Rooms.getRoomDoors(Game.currentRoom);
+    if (!doors || doors.length === 0) {
+      return;
+    }
+
+    var pulseAlpha = 0.4 + 0.3 * Math.sin(animTime / 500);
+
+    for (var i = 0; i < doors.length; i++) {
+      var door = doors[i];
+      var pts = worldRectToIsoDiamond(door.x, door.y, door.w, door.h);
+
+      // Draw glowing door frame
+      ctx.save();
+      ctx.globalAlpha = pulseAlpha;
+      ctx.strokeStyle = door.color || '#44ccff';
+      ctx.lineWidth = 3;
+      ctx.shadowColor = door.color || '#44ccff';
+      ctx.shadowBlur = 12;
+
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (var j = 1; j < pts.length; j++) {
+        ctx.lineTo(pts[j].x, pts[j].y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+
+      // Fill with subtle tint
+      ctx.globalAlpha = pulseAlpha * 0.2;
+      ctx.fillStyle = door.color || '#44ccff';
+      ctx.fill();
+
+      ctx.restore();
+
+      // Label text above the frame
+      if (door.label) {
+        var centerX = (pts[0].x + pts[1].x + pts[2].x + pts[3].x) / 4;
+        var topY = Math.min(pts[0].y, pts[1].y, pts[2].y, pts[3].y);
+
+        ctx.save();
+        ctx.globalAlpha = pulseAlpha + 0.2;
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#000000';
+        ctx.fillText(door.label, centerX, topY - 6);
+        ctx.fillStyle = door.color || '#44ccff';
+        ctx.fillText(door.label, centerX, topY - 7);
+        ctx.restore();
+      }
+    }
+  }
+
   function render() {
     if (!ctx) {
       return;
