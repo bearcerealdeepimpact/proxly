@@ -138,6 +138,10 @@
     send({ type: 'drink_kick', drinkId: drinkId, vx: vx, vy: vy });
   }
 
+  function sendChat(text) {
+    send({ type: 'chat', text: text });
+  }
+
   // ─── Message handlers ──────────────────────────────────────────
 
   function handleMessage(msg) {
@@ -188,6 +192,18 @@
         Game.updateGroundDrinkVelocity(msg.drinkId, msg.vx, msg.vy);
         break;
 
+      case 'chat':
+        if (window.Chat && Chat.receiveMessage) {
+          Chat.receiveMessage(msg.id, msg.name, msg.text);
+        }
+        break;
+
+      case 'chat_error':
+        if (window.Chat && Chat.showError) {
+          Chat.showError(msg.error);
+        }
+        break;
+
       case 'music_state':
         // Could sync music position here in future
         break;
@@ -217,6 +233,7 @@
     sendDrinkOrder: sendDrinkOrder,
     sendDrinkCarry: sendDrinkCarry,
     sendDrinkDrop: sendDrinkDrop,
-    sendDrinkKick: sendDrinkKick
+    sendDrinkKick: sendDrinkKick,
+    sendChat: sendChat
   };
 })();

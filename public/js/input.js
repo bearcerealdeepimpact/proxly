@@ -188,6 +188,11 @@
     var dx = 0;
     var dy = 0;
 
+    // Block movement when chat input is focused
+    if (window.Chat && Chat.isChatFocused()) {
+      return { dx: 0, dy: 0 };
+    }
+
     // Keyboard WASD (isometric remapping)
     if (keys['w']) { dx -= 1; dy -= 1; }
     if (keys['s']) { dx += 1; dy += 1; }

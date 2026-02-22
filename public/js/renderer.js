@@ -2273,6 +2273,81 @@
       ctx.fillStyle = COLORS.NAME_TEXT;
       ctx.fillText(name, headSx, nameY);
     }
+
+    // ── Speech bubble ──
+    if (window.Chat && Chat.getBubble) {
+      var bubble = Chat.getBubble(pid);
+      if (bubble) {
+        var bubbleFontSize = Math.max(9, Math.round(10 * zoomLevel));
+        ctx.font = bubbleFontSize + 'px Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+
+        // Word-wrap text to max ~20 chars per line
+        var maxLineChars = 22;
+        var words = bubble.text.split(' ');
+        var lines = [];
+        var currentLine = '';
+        for (var wi = 0; wi < words.length; wi++) {
+          var testLine = currentLine.length > 0 ? currentLine + ' ' + words[wi] : words[wi];
+          if (testLine.length > maxLineChars && currentLine.length > 0) {
+            lines.push(currentLine);
+            currentLine = words[wi];
+          } else {
+            currentLine = testLine;
+          }
+        }
+        if (currentLine.length > 0) lines.push(currentLine);
+        if (lines.length > 3) lines = lines.slice(0, 3);
+
+        var lineH = bubbleFontSize + 2;
+        var bubblePadX = 8;
+        var bubblePadY = 5;
+        var bubbleW = 0;
+        for (var li = 0; li < lines.length; li++) {
+          var lw = ctx.measureText(lines[li]).width;
+          if (lw > bubbleW) bubbleW = lw;
+        }
+        bubbleW += bubblePadX * 2;
+        var bubbleH = lines.length * lineH + bubblePadY * 2;
+        var bubbleBaseY = (nameY || (headY - headR * TILE_SCALE - 4)) - 6;
+        var bubbleX = headSx;
+        var bubbleTop = bubbleBaseY - bubbleH;
+
+        ctx.save();
+        ctx.globalAlpha = bubble.alpha;
+
+        // Bubble background
+        ctx.fillStyle = 'rgba(0,0,0,0.75)';
+        ctx.beginPath();
+        ctx.roundRect(bubbleX - bubbleW / 2, bubbleTop, bubbleW, bubbleH, 6);
+        ctx.fill();
+
+        // Bubble border
+        ctx.strokeStyle = 'rgba(0,212,255,0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(bubbleX - bubbleW / 2, bubbleTop, bubbleW, bubbleH, 6);
+        ctx.stroke();
+
+        // Tail triangle
+        ctx.fillStyle = 'rgba(0,0,0,0.75)';
+        ctx.beginPath();
+        ctx.moveTo(bubbleX - 4, bubbleBaseY);
+        ctx.lineTo(bubbleX + 4, bubbleBaseY);
+        ctx.lineTo(bubbleX, bubbleBaseY + 5);
+        ctx.closePath();
+        ctx.fill();
+
+        // Text
+        ctx.fillStyle = '#f0f0f0';
+        for (var ti = 0; ti < lines.length; ti++) {
+          ctx.fillText(lines[ti], bubbleX, bubbleTop + bubblePadY + (ti + 1) * lineH);
+        }
+
+        ctx.restore();
+      }
+    }
   }
 
   // ─── Atmosphere / HUD ─────────────────────────────────────────────────

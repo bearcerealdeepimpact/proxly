@@ -54,6 +54,7 @@ app.post('/api/mailing-list', (req, res) => {
 
 const players = new Map();       // uuid → { id, name, x, y, characterId, drinkState, drinkColor, room, ws }
 const groundDrinks = new Map();  // drinkId → { id, x, y, vx, vy, color, room }
+const chatRateLimit = new Map(); // playerId → lastMessageTimestamp
 
 function stripWs(player) {
   const { ws, ...rest } = player;
@@ -276,6 +277,36 @@ wss.on('connection', (ws) => {
           vx: msg.vx,
           vy: msg.vy
         }, ws);
+        break;
+      }
+
+      case 'chat': {
+        const player = players.get(playerId);
+        if (!player) break;
+
+        // Validate message
+        let text = msg.text;
+        if (typeof text !== 'string') break;
+        text = text.trim();
+        if (text.length === 0 || text.length > 200) break;
+
+        // Rate limit: 1 message per second per player
+        const now = Date.now();
+        const lastMsg = chatRateLimit.get(playerId) || 0;
+        if (now - lastMsg < 1000) {
+          ws.send(JSON.stringify({ type: 'chat_error', error: 'Too fast! Wait a moment.' }));
+          break;
+        }
+        chatRateLimit.set(playerId, now);
+
+        // Broadcast to all players in the same room (including sender)
+        const chatMsg = {
+          type: 'chat',
+          id: playerId,
+          name: player.name,
+          text: text
+        };
+        broadcastToRoom(player.room, chatMsg);
         break;
       }
     }

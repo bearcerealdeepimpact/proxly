@@ -60,6 +60,11 @@
     // Show instructions briefly
     Input.showInstructions();
 
+    // Show chat panel
+    if (window.Chat && Chat.show) {
+      Chat.show();
+    }
+
     // Start game loop
     Game.localPlayer.name = 'You';
     if (window.Network && Network.connect) {
