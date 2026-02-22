@@ -2,26 +2,14 @@
   'use strict';
 
   var canvas = null;
-  var nameOverlay = null;
-  var nameInput = null;
-  var nameSubmit = null;
   var running = false;
   var lastTimestamp = 0;
-  var lastSentX = null;
-  var lastSentY = null;
   var tabFocused = true;
 
   var C = Game.CONSTANTS;
-  var MIN_X = C.WALL_THICKNESS + C.PLAYER_RADIUS;
-  var MAX_X = C.WORLD_WIDTH - C.WALL_THICKNESS - C.PLAYER_RADIUS;
-  var MIN_Y = C.WALL_THICKNESS + C.PLAYER_RADIUS;
-  var MAX_Y = C.WORLD_HEIGHT - C.WALL_THICKNESS - C.PLAYER_RADIUS;
 
   function init() {
     canvas = document.getElementById('gameCanvas');
-    nameOverlay = document.getElementById('nameOverlay');
-    nameInput = document.getElementById('nameInput');
-    nameSubmit = document.getElementById('nameSubmit');
 
     Renderer.init(canvas);
     Input.init(canvas);
@@ -30,14 +18,22 @@
     } catch (e) {
       // Audio init may fail but should not block game
     }
-    Network.connect();
 
-    nameSubmit.addEventListener('click', handleNameSubmit);
-    nameInput.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-        handleNameSubmit();
-      }
-    });
+    // Setup entrance overlay
+    var enterBtn = document.getElementById('enterBtn');
+    if (enterBtn) {
+      enterBtn.addEventListener('click', handleEnter);
+    }
+
+    // Also allow clicking the whole entrance overlay
+    var entranceOverlay = document.getElementById('entranceOverlay');
+    if (entranceOverlay) {
+      entranceOverlay.addEventListener('click', function (e) {
+        if (e.target === entranceOverlay || e.target.closest('.entrance-content')) {
+          handleEnter();
+        }
+      });
+    }
 
     window.addEventListener('focus', function () {
       tabFocused = true;
@@ -48,32 +44,31 @@
     });
   }
 
-  function handleNameSubmit() {
-    var name = (nameInput.value || '').trim();
-    if (name.length < 1 || name.length > C.MAX_NAME_LENGTH) {
-      return;
-    }
+  function handleEnter() {
+    var entranceOverlay = document.getElementById('entranceOverlay');
+    if (!entranceOverlay || entranceOverlay.style.display === 'none') return;
 
-    Game.localPlayer.name = name;
-    Network.sendJoin(name);
+    // Hide entrance overlay
+    entranceOverlay.classList.add('entrance-fade-out');
+    setTimeout(function () {
+      entranceOverlay.style.display = 'none';
+    }, 600);
 
-    nameOverlay.style.display = 'none';
+    // Initialize audio (user gesture context)
+    MusicPlayer.unlockAndPlay();
 
-    try {
-      MusicPlayer.unlockAndPlay();
-    } catch (e) {
-      // Audio play may fail but should not block game
-    }
+    // Show instructions briefly
+    Input.showInstructions();
 
+    // Start game loop
+    Game.localPlayer.name = 'You';
     running = true;
     lastTimestamp = 0;
     requestAnimationFrame(gameLoop);
   }
 
   function gameLoop(timestamp) {
-    if (!running) {
-      return;
-    }
+    if (!running) return;
 
     var deltaTime = 0;
     if (lastTimestamp > 0) {
@@ -91,44 +86,47 @@
   }
 
   function update(deltaTime) {
-    if (!tabFocused) {
-      return;
-    }
+    if (!tabFocused) return;
 
-    // Drink system ticks even when standing still
+    // Room transitions
+    Game.updateTransition(deltaTime);
+
+    // Don't process input during transition
+    if (Game.transitioning) return;
+
+    // Drink system
     Game.updateDrinkSystem(deltaTime);
 
-    // Crowd NPCs move even when player is still
+    // Crowd NPCs
     Game.updateCrowd(deltaTime);
 
-    // Update interaction prompts
-    if (typeof Interaction !== 'undefined' && Interaction.update) {
+    // Interaction proximity checks
+    if (window.Interaction) {
       Interaction.update();
     }
 
+    // Player movement
+    if (window.Interaction && Interaction.isModalOpen()) return;
+
     var movement = Input.getMovement();
-    if (movement.dx === 0 && movement.dy === 0) {
-      return;
-    }
+    if (movement.dx === 0 && movement.dy === 0) return;
 
     var player = Game.localPlayer;
+    var room = Rooms.getRoom(Game.currentRoom);
+    var wt = C.WALL_THICKNESS;
+    var pr = C.PLAYER_RADIUS;
+
     var newX = player.x + movement.dx * C.MOVE_SPEED * deltaTime;
     var newY = player.y + movement.dy * C.MOVE_SPEED * deltaTime;
 
-    newX = Math.max(MIN_X, Math.min(MAX_X, newX));
-    newY = Math.max(MIN_Y, Math.min(MAX_Y, newY));
+    newX = Math.max(wt + pr, Math.min(room.width - wt - pr, newX));
+    newY = Math.max(wt + pr, Math.min(room.height - wt - pr, newY));
 
     player.x = newX;
     player.y = newY;
 
-    // Kick ground drinks when walking over them
+    // Kick ground drinks
     Game.kickNearbyDrink(player.x, player.y);
-
-    if (newX !== lastSentX || newY !== lastSentY) {
-      Network.sendMove(newX, newY);
-      lastSentX = newX;
-      lastSentY = newY;
-    }
   }
 
   function render() {

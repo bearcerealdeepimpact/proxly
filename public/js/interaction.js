@@ -110,14 +110,8 @@
 
   function handleInteractable(obj) {
     switch (obj.type) {
-      case 'bio':
-        showBioModal();
-        break;
-      case 'photo_gallery':
-        showPhotosModal();
-        break;
-      case 'epk':
-        showEPKModal();
+      case 'demo_drop':
+        showDemoDropModal();
         break;
       case 'bookings':
         showBookingsModal();
@@ -152,75 +146,50 @@
     modalOpen = false;
   }
 
-  function showBioModal() {
+  function showDemoDropModal() {
     showModal(
       '<div class="modal-box">' +
-        '<h2>Revilo &amp; Longfield</h2>' +
-        '<p class="modal-subtitle">DJ Duo &middot; The Netherlands</p>' +
-        '<div class="bio-text">' +
-          '<p>Revilo &amp; Longfield are a DJ duo from the Netherlands who share a deep love for disco and funky house. ' +
-          'They first crossed paths at a local record fair, bonding over a shared obsession with rare Italo-disco edits ' +
-          'and sun-drenched boogie cuts.</p>' +
-          '<p>What started as casual back-to-back sessions in living rooms quickly evolved into a partnership built on ' +
-          'groove, energy, and a refusal to take the dancefloor too seriously. Their sound blends warm, vinyl-rooted disco ' +
-          'with rolling funky house basslines &mdash; always melodic, always moving.</p>' +
-          '<p>From intimate bar sets to festival stages, Revilo &amp; Longfield bring a feel-good energy that keeps crowds ' +
-          'dancing well past closing time. Their journey is just getting started, and every set is an invitation to join the ride.</p>' +
-        '</div>' +
-        '<button class="modal-close" onclick="Interaction.hideModal()">✕</button>' +
+        '<h2>Drop Your Demo</h2>' +
+        '<p class="modal-subtitle">Send us your best track</p>' +
+        '<form id="demoDropForm">' +
+          '<input type="text" id="dd_artist" placeholder="Artist name" required>' +
+          '<input type="email" id="dd_email" placeholder="Email" required>' +
+          '<input type="text" id="dd_link" placeholder="Demo link (SoundCloud, Dropbox...)" required>' +
+          '<textarea id="dd_message" placeholder="Short message (optional)" rows="3"></textarea>' +
+          '<button type="submit" class="modal-btn">Submit Demo</button>' +
+        '</form>' +
+        '<button class="modal-close" onclick="Interaction.hideModal()">\u2715</button>' +
       '</div>'
     );
-  }
 
-  function showPhotosModal() {
-    showModal(
-      '<div class="modal-box">' +
-        '<h2>Photos</h2>' +
-        '<p class="modal-subtitle">Revilo &amp; Longfield</p>' +
-        '<div class="photo-grid">' +
-          '<div class="photo-placeholder">Photo 1</div>' +
-          '<div class="photo-placeholder">Photo 2</div>' +
-          '<div class="photo-placeholder">Photo 3</div>' +
-          '<div class="photo-placeholder">Photo 4</div>' +
-          '<div class="photo-placeholder">Photo 5</div>' +
-          '<div class="photo-placeholder">Photo 6</div>' +
-        '</div>' +
-        '<button class="modal-close" onclick="Interaction.hideModal()">✕</button>' +
-      '</div>'
-    );
-  }
+    var form = document.getElementById('demoDropForm');
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var artist = document.getElementById('dd_artist').value;
+        var email = document.getElementById('dd_email').value;
+        var link = document.getElementById('dd_link').value;
+        var msg = document.getElementById('dd_message').value;
 
-  function showEPKModal() {
-    showModal(
-      '<div class="modal-box">' +
-        '<h2>Electronic Press Kit</h2>' +
-        '<p class="modal-subtitle">Revilo &amp; Longfield</p>' +
-        '<div class="epk-content">' +
-          '<div class="epk-section">' +
-            '<h3>Press Bio</h3>' +
-            '<p>Revilo &amp; Longfield are a Netherlands-based DJ duo specialising in disco and funky house. ' +
-            'Known for their warm, groove-driven sets and infectious energy, they blend vinyl-rooted disco with ' +
-            'rolling funky house basslines to keep dancefloors moving all night long.</p>' +
-          '</div>' +
-          '<div class="epk-section">' +
-            '<h3>Details</h3>' +
-            '<p><strong>Genres:</strong> Disco / Funky House</p>' +
-            '<p><strong>Based in:</strong> The Netherlands</p>' +
-          '</div>' +
-          '<div class="epk-section">' +
-            '<h3>Booking</h3>' +
-            '<p class="epk-email">bookings@revilolongfield.nl</p>' +
-            '<a href="mailto:bookings@revilolongfield.nl" class="modal-btn" target="_blank">Get in Touch</a>' +
-          '</div>' +
-          '<div class="epk-section">' +
-            '<h3>Downloads</h3>' +
-            '<a href="#" class="epk-link">Press Photos (Hi-Res)</a>' +
-            '<a href="#" class="epk-link">Tech Rider</a>' +
-          '</div>' +
-        '</div>' +
-        '<button class="modal-close" onclick="Interaction.hideModal()">✕</button>' +
-      '</div>'
-    );
+        Network.submitDemoDrop(artist, email, link, msg).then(function (res) {
+          showModal(
+            '<div class="modal-box">' +
+              '<h2>Demo Received!</h2>' +
+              '<p class="modal-subtitle">We\'ll have a listen. Thanks!</p>' +
+              '<button class="modal-btn" onclick="Interaction.hideModal()">Nice</button>' +
+            '</div>'
+          );
+        }).catch(function () {
+          showModal(
+            '<div class="modal-box">' +
+              '<h2>Oops</h2>' +
+              '<p class="modal-subtitle">Something went wrong. Try again later.</p>' +
+              '<button class="modal-btn" onclick="Interaction.hideModal()">OK</button>' +
+            '</div>'
+          );
+        });
+      });
+    }
   }
 
   function showBookingsModal() {
@@ -228,7 +197,7 @@
       '<div class="modal-box">' +
         '<h2>Bookings</h2>' +
         '<p class="modal-subtitle">Want to book Revilo & Longfield?</p>' +
-        '<p class="modal-email-large">bookings@revilolongfield.nl</p>' +
+        '<p class="modal-email">bookings@revilolongfield.nl</p>' +
         '<a href="mailto:bookings@revilolongfield.nl" class="modal-btn" target="_blank">Send Email</a>' +
         '<button class="modal-close" onclick="Interaction.hideModal()">\u2715</button>' +
       '</div>'

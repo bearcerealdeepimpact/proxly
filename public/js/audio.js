@@ -1,170 +1,172 @@
 (function () {
   'use strict';
 
-  var widget = null;
-  var widgetReady = false;
+  var audio = null;
+  var audioAlt = null;
+  var currentAudio = null;
   var currentTrack = null;
-  var autoplayUnlocked = false;
-  var pendingPlay = false;
-  var isMuted = false;
+  var nextTrack = null;
+  var trackDuration = 0;
+  var trackStartedAt = 0;
+  var nextTrackPreloaded = false;
+  var isMuted = true; // Start muted
   var volumeBeforeMute = 50;
-  var currentProgress = 0;
-  var isPlaying = false;
   var tabFocused = true;
+  var unlocked = false;
 
   function init() {
-    if (widget) {
-      return;
-    }
+    if (audio) return;
+    audio = new Audio();
+    audio.preload = 'auto';
+    audioAlt = new Audio();
+    audioAlt.preload = 'auto';
+    currentAudio = audio;
 
-    if (typeof SC === 'undefined') {
-      hideNowPlaying();
-      return;
-    }
-
-    var iframeEl = document.getElementById('sc-widget');
-    if (!iframeEl) {
-      return;
-    }
-
-    widget = SC.Widget('sc-widget');
-
-    widget.bind(SC.Widget.Events.READY, function () {
-      widgetReady = true;
-
-      var savedVolume = localStorage.getItem('audioVolume');
-      if (savedVolume !== null) {
-        var vol = parseInt(savedVolume, 10);
-        widget.setVolume(vol);
-        var volumeSlider = document.getElementById('volumeSlider');
-        if (volumeSlider) {
-          volumeSlider.value = vol;
+    function setupAudioHandlers(audioElement) {
+      audioElement.onerror = function () {
+        if (currentAudio === audioElement) {
+          currentTrack = null;
         }
-      } else {
-        var volumeSlider = document.getElementById('volumeSlider');
-        if (volumeSlider) {
-          widget.setVolume(parseInt(volumeSlider.value, 10));
+      };
+      audioElement.onended = function () {
+        if (currentAudio === audioElement) {
+          handleTrackTransition();
         }
-      }
+      };
+      audioElement.ontimeupdate = function () {
+        if (currentAudio === audioElement) {
+          handleSeamlessLoop();
+        }
+      };
+    }
 
-      if (pendingPlay) {
-        pendingPlay = false;
-        widget.play();
-      }
-    });
-
-    widget.bind(SC.Widget.Events.PLAY, function () {
-      isPlaying = true;
-    });
-
-    widget.bind(SC.Widget.Events.PAUSE, function () {
-      isPlaying = false;
-    });
-
-    widget.bind(SC.Widget.Events.FINISH, function () {
-      isPlaying = false;
-      currentProgress = 0;
-    });
-
-    widget.bind(SC.Widget.Events.PLAY_PROGRESS, function (data) {
-      currentProgress = data.relativePosition;
-      updateProgressBar(currentProgress);
-    });
+    setupAudioHandlers(audio);
+    setupAudioHandlers(audioAlt);
 
     var volumeSlider = document.getElementById('volumeSlider');
     if (volumeSlider) {
+      var savedVolume = localStorage.getItem('audioVolume');
+      if (savedVolume !== null) {
+        var volumeValue = parseInt(savedVolume, 10);
+        volumeSlider.value = volumeValue;
+        volumeBeforeMute = volumeValue;
+      }
+      // Start with volume 0 (muted)
+      audio.volume = 0;
+      audioAlt.volume = 0;
+
       volumeSlider.addEventListener('input', function () {
-        setVolume(parseInt(volumeSlider.value, 10));
+        var val = parseInt(volumeSlider.value, 10);
+        if (val > 0) {
+          isMuted = false;
+          updateMuteIcon();
+        }
+        setVolumeInternal(val);
+        localStorage.setItem('audioVolume', val.toString());
       });
     }
 
-    checkAutoplayUnlock();
+    // Mute toggle button
+    var muteBtn = document.getElementById('muteToggle');
+    if (muteBtn) {
+      muteBtn.addEventListener('click', function () {
+        toggleMute();
+      });
+    }
 
     window.addEventListener('focus', function () {
       tabFocused = true;
+      handleTabFocus();
     });
 
     window.addEventListener('blur', function () {
       tabFocused = false;
     });
+
+    updateMuteIcon();
   }
 
-  function hideNowPlaying() {
-    var nowPlaying = document.getElementById('nowPlaying');
-    if (nowPlaying) {
-      nowPlaying.style.display = 'none';
+  // Called from entrance click (user gesture)
+  function unlockAndPlay() {
+    unlocked = true;
+
+    // Load and play the track
+    fetch('/api/playlist')
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data && data.tracks && data.tracks.length > 0) {
+          var track = data.tracks[0];
+          playTrack({
+            url: '/audio/' + track.filename,
+            title: track.title,
+            artist: track.artist,
+            duration: track.duration
+          });
+        }
+      })
+      .catch(function () {
+        // Silently fail — audio is optional
+      });
+  }
+
+  function fadeInAudio(audioElement, targetVolume, duration) {
+    var startTime = Date.now();
+    var fadeDuration = duration || 1500;
+
+    function updateVolume() {
+      var elapsed = Date.now() - startTime;
+      var progress = Math.min(elapsed / fadeDuration, 1);
+      audioElement.volume = targetVolume * progress;
+      if (progress < 1) {
+        requestAnimationFrame(updateVolume);
+      }
     }
+
+    audioElement.volume = 0;
+    requestAnimationFrame(updateVolume);
   }
 
-  function updateProgressBar(relativePosition) {
-    var progressBarEl = document.querySelector('.progress-bar');
-    if (progressBarEl) {
-      var percentage = Math.min(100, Math.max(0, relativePosition * 100));
-      progressBarEl.style.width = percentage + '%';
-    }
-  }
+  function playTrack(trackInfo) {
+    if (!audio) init();
+    if (!trackInfo || !trackInfo.url) return;
+    if (!unlocked) return;
 
-  function checkAutoplayUnlock() {
-    var unlocked = localStorage.getItem('autoplayUnlocked');
-    if (unlocked === 'true') {
-      autoplayUnlocked = true;
-    } else {
-      setupAutoplayUnlock();
-    }
-  }
+    nextTrackPreloaded = false;
+    nextTrack = null;
+    currentTrack = trackInfo;
+    trackDuration = trackInfo.duration || 0;
+    trackStartedAt = Date.now();
+    currentAudio.src = trackInfo.url;
 
-  function setupAutoplayUnlock() {
-    var unlockBtn = document.getElementById('autoplayUnlockBtn');
-    if (unlockBtn) {
-      unlockBtn.addEventListener('click', function () {
-        autoplayUnlocked = true;
-        localStorage.setItem('autoplayUnlocked', 'true');
-        hideAutoplayOverlay();
-        unlockAndPlay();
+    var targetVolume = isMuted ? 0 : getStoredVolume() / 100;
+    var playPromise = currentAudio.play();
+    if (playPromise !== undefined) {
+      playPromise.then(function () {
+        if (!isMuted) {
+          fadeInAudio(currentAudio, targetVolume, 1500);
+        }
+      }).catch(function () {
+        currentTrack = null;
       });
     }
   }
 
-  function showAutoplayOverlay() {
-    var overlay = document.getElementById('autoplayOverlay');
-    if (overlay) {
-      overlay.style.display = 'flex';
-    }
+  function getStoredVolume() {
+    var slider = document.getElementById('volumeSlider');
+    return slider ? parseInt(slider.value, 10) : 50;
   }
 
-  function hideAutoplayOverlay() {
-    var overlay = document.getElementById('autoplayOverlay');
-    if (overlay) {
-      overlay.style.display = 'none';
-    }
-  }
-
-  function unlockAndPlay() {
-    if (!widget) {
-      init();
-    }
-
-    if (!autoplayUnlocked) {
-      showAutoplayOverlay();
-      return;
-    }
-
-    if (widget && widgetReady) {
-      widget.play();
-    } else {
-      pendingPlay = true;
-    }
+  function setVolumeInternal(value) {
+    var v = Math.min(100, Math.max(0, value)) / 100;
+    if (audio) audio.volume = v;
+    if (audioAlt) audioAlt.volume = v;
   }
 
   function setVolume(value) {
+    if (!audio) init();
     var volumeValue = Math.min(100, Math.max(0, value));
-
-    if (widget && widgetReady) {
-      widget.setVolume(volumeValue);
-    }
-
+    setVolumeInternal(volumeValue);
     localStorage.setItem('audioVolume', volumeValue.toString());
-
     var volumeSlider = document.getElementById('volumeSlider');
     if (volumeSlider) {
       volumeSlider.value = volumeValue;
@@ -172,62 +174,141 @@
   }
 
   function increaseVolume() {
-    var volumeSlider = document.getElementById('volumeSlider');
-    if (volumeSlider) {
-      var currentVolume = parseInt(volumeSlider.value, 10);
-      var newVolume = Math.min(100, currentVolume + 5);
-      setVolume(newVolume);
-    }
+    if (!audio) init();
+    var current = getStoredVolume();
+    var newVol = Math.min(100, current + 5);
+    isMuted = false;
+    setVolume(newVol);
+    updateMuteIcon();
   }
 
   function decreaseVolume() {
-    var volumeSlider = document.getElementById('volumeSlider');
-    if (volumeSlider) {
-      var currentVolume = parseInt(volumeSlider.value, 10);
-      var newVolume = Math.max(0, currentVolume - 5);
-      setVolume(newVolume);
+    if (!audio) init();
+    var current = getStoredVolume();
+    var newVol = Math.max(0, current - 5);
+    setVolume(newVol);
+    if (newVol === 0) {
+      isMuted = true;
     }
+    updateMuteIcon();
   }
 
   function toggleMute() {
-    var volumeSlider = document.getElementById('volumeSlider');
-    if (!volumeSlider) {
-      return;
-    }
+    if (!audio) init();
 
     if (isMuted) {
-      setVolume(volumeBeforeMute);
       isMuted = false;
+      var vol = volumeBeforeMute || 50;
+      setVolume(vol);
     } else {
-      volumeBeforeMute = parseInt(volumeSlider.value, 10);
-      setVolume(0);
+      volumeBeforeMute = getStoredVolume();
       isMuted = true;
+      setVolumeInternal(0);
     }
+    updateMuteIcon();
   }
 
-  function getCurrentTrack() {
-    return currentTrack;
-  }
-
-  function getProgress() {
-    return currentProgress;
+  function updateMuteIcon() {
+    var icon = document.getElementById('muteToggle');
+    if (!icon) return;
+    icon.textContent = isMuted ? '\uD83D\uDD07' : '\uD83D\uDD0A';
+    icon.title = isMuted ? 'Unmute' : 'Mute';
   }
 
   function updateNowPlayingUI() {
-    updateProgressBar(currentProgress);
+    var trackTitleEl = document.querySelector('.track-title');
+    var trackArtistEl = document.querySelector('.track-artist');
+    var progressBarEl = document.querySelector('.progress-bar');
+
+    if (!currentTrack) return;
+
+    if (trackTitleEl) {
+      trackTitleEl.textContent = currentTrack.title || 'Unknown Track';
+    }
+    if (trackArtistEl) {
+      trackArtistEl.textContent = currentTrack.artist || '';
+    }
+    if (progressBarEl && currentAudio && currentAudio.duration) {
+      var pct = Math.min(100, Math.max(0, (currentAudio.currentTime / currentAudio.duration) * 100));
+      progressBarEl.style.width = pct + '%';
+    }
   }
+
+  function handleSeamlessLoop() {
+    if (!currentAudio || !currentTrack) return;
+    var timeRemaining = currentAudio.duration - currentAudio.currentTime;
+    if (timeRemaining < 3 && !nextTrackPreloaded && currentTrack) {
+      preloadNextTrack();
+    }
+  }
+
+  function preloadNextTrack() {
+    if (nextTrackPreloaded || !currentTrack) return;
+    nextTrackPreloaded = true;
+    nextTrack = currentTrack; // Loop the same track
+    var nextAudio = (currentAudio === audio) ? audioAlt : audio;
+    nextAudio.src = currentTrack.url;
+    nextAudio.load();
+  }
+
+  function handleTrackTransition() {
+    if (!nextTrack || !nextTrackPreloaded) {
+      // Loop the current track
+      if (currentTrack && currentAudio) {
+        currentAudio.currentTime = 0;
+        currentAudio.play().catch(function () {});
+      }
+      return;
+    }
+
+    var nextAudio = (currentAudio === audio) ? audioAlt : audio;
+    currentAudio = nextAudio;
+
+    var targetVolume = isMuted ? 0 : getStoredVolume() / 100;
+    var playPromise = currentAudio.play();
+    if (playPromise !== undefined) {
+      playPromise.then(function () {
+        if (!isMuted) {
+          fadeInAudio(currentAudio, targetVolume, 1500);
+        }
+      }).catch(function () {
+        currentTrack = null;
+      });
+    }
+
+    nextTrackPreloaded = false;
+    nextTrack = null;
+  }
+
+  function handleTabFocus() {
+    if (!currentAudio || !currentTrack) return;
+    if (currentAudio.paused && unlocked) {
+      var targetVolume = isMuted ? 0 : getStoredVolume() / 100;
+      var playPromise = currentAudio.play();
+      if (playPromise !== undefined) {
+        playPromise.then(function () {
+          if (!isMuted) {
+            fadeInAudio(currentAudio, targetVolume, 1500);
+          }
+        }).catch(function () {});
+      }
+    }
+  }
+
+  // Legacy stubs (no longer used but prevent errors)
+  function handleMusicState() {}
+  function handleMusicSync() {}
 
   window.MusicPlayer = {
     init: init,
+    playTrack: playTrack,
     unlockAndPlay: unlockAndPlay,
+    updateNowPlayingUI: updateNowPlayingUI,
     setVolume: setVolume,
     increaseVolume: increaseVolume,
     decreaseVolume: decreaseVolume,
     toggleMute: toggleMute,
-    getCurrentTrack: getCurrentTrack,
-    getProgress: getProgress,
-    updateNowPlayingUI: updateNowPlayingUI,
-    handleMusicState: function () {},
-    handleMusicSync: function () {}
+    handleMusicState: handleMusicState,
+    handleMusicSync: handleMusicSync
   };
 })();
