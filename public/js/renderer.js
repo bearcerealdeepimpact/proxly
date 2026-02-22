@@ -2373,12 +2373,26 @@
     initPatternCache();
   }
 
+  function onRoomChange(roomId) {
+    // Recalculate tile scale and centering offsets for the new room
+    zoomLevel = 1.0;
+    recalcOffsets();
+
+    // Clear player tracking caches
+    playerLastPos = {};
+    playerFacing = {};
+    playerWalkPhase = {};
+    playerSpeed = {};
+    playerMoveTime = {};
+  }
+
   window.Renderer = {
     init: init,
     render: render,
     drawClub: drawFloor,
     drawPlayer: drawPlayer,
     setZoom: setZoom,
-    getZoom: getZoom
+    getZoom: getZoom,
+    onRoomChange: onRoomChange
   };
 })();
