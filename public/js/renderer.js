@@ -1819,6 +1819,12 @@
     }
     playerLastPos[pid] = { x: player.x, y: player.y };
 
+    // NPC facing override: use facingDx/facingDy when standing still
+    if (!moved && player.facingDx !== undefined && player.facingDy !== undefined &&
+        (player.facingDx !== 0 || player.facingDy !== 0)) {
+      playerFacing[pid] = { dx: player.facingDx, dy: player.facingDy };
+    }
+
     // Smooth speed (exponential moving average)
     var prevSpeed = playerSpeed[pid] || 0;
     var rawSpeed = frameDist;

@@ -223,8 +223,19 @@
   var NPC_COUNT = 10;
   var NPC_SPEED = 80;
 
-  var NPC_NAMES = ['Vibes', 'Neon', 'Echo', 'Bass', 'Luna', 'Groove', 'Pixel', 'Blaze', 'Nova', 'Dusk'];
   var NPC_COLORS = ['#e06090', '#60b080', '#b080e0', '#e0a050', '#50b0d0', '#d07070', '#70c070', '#a070d0', '#d0b040', '#60a0a0'];
+
+  // Group system: 4 groups (3, 3, 2, 2) with cluster centers on the dance floor
+  var NPC_GROUPS = [
+    { members: [0, 1, 2], cx: 280, cy: 280, relocateTimer: 0 },
+    { members: [3, 4, 5], cx: 420, cy: 300, relocateTimer: 0 },
+    { members: [6, 7],    cx: 350, cy: 220, relocateTimer: 0 },
+    { members: [8, 9],    cx: 500, cy: 260, relocateTimer: 0 }
+  ];
+
+  // DJ position (top-center of dance floor)
+  var DJ_X = 400;
+  var DJ_Y = 35;
 
   var crowdNPCs = [];
 
@@ -232,73 +243,101 @@
     return min + Math.random() * (max - min);
   }
 
-  function pickZoneTarget(zone) {
-    switch (zone) {
-      case 'dance':
-        return { x: randomInRange(150, 650), y: randomInRange(160, 420) };
-      case 'bar':
-        return { x: randomInRange(80, 220), y: randomInRange(500, 520) };
-      case 'table1':
-        return { x: randomInRange(85, 115), y: randomInRange(290, 320) };
-      case 'table2':
-        return { x: randomInRange(685, 715), y: randomInRange(290, 320) };
-      default:
-        return { x: randomInRange(150, 650), y: randomInRange(160, 420) };
+  function pickBarTarget() {
+    return { x: randomInRange(80, 220), y: randomInRange(500, 520) };
+  }
+
+  function pickGroupDanceTarget(groupIndex) {
+    var group = NPC_GROUPS[groupIndex];
+    var angle = Math.random() * Math.PI * 2;
+    var dist = 15 + Math.random() * 25; // 15-40px from group center
+    var x = group.cx + Math.cos(angle) * dist;
+    var y = group.cy + Math.sin(angle) * dist;
+    // Clamp to dance floor bounds
+    x = Math.max(150, Math.min(650, x));
+    y = Math.max(160, Math.min(420, y));
+    return { x: x, y: y };
+  }
+
+  function getGroupForNPC(npcIndex) {
+    for (var g = 0; g < NPC_GROUPS.length; g++) {
+      for (var m = 0; m < NPC_GROUPS[g].members.length; m++) {
+        if (NPC_GROUPS[g].members[m] === npcIndex) return g;
+      }
     }
+    return 0;
   }
 
-  function pickNextState() {
-    var roll = Math.random();
-    if (roll < 0.40) return 'dancing';
-    if (roll < 0.65) return 'at_bar';
-    if (roll < 0.85) return 'at_table';
-    return 'idle';
+  function npcDanceTimer() {
+    return 8 + Math.random() * 8; // 8-16s dancing
   }
 
-  function zoneForState(state) {
-    if (state === 'dancing') return 'dance';
-    if (state === 'at_bar') return 'bar';
-    if (state === 'at_table') return Math.random() < 0.5 ? 'table1' : 'table2';
-    return null;
+  function npcDrinkTimer() {
+    return 10 + Math.random() * 10; // 10-20s carrying drink
   }
 
-  function npcStateTimer(index) {
-    return 8 + (index % NPC_COUNT) * 1.2 + Math.random() * 4;
+  function computeDJFacing(npc) {
+    var dx = DJ_X - npc.x;
+    var dy = DJ_Y - npc.y;
+    var len = Math.sqrt(dx * dx + dy * dy);
+    if (len > 0) {
+      npc.facingDx = dx / len;
+      npc.facingDy = dy / len;
+    }
   }
 
   function initCrowd() {
     crowdNPCs.length = 0;
-    for (var i = 0; i < NPC_COUNT; i++) {
-      var startState, startPos;
-      if (i < 6) {
-        startState = 'dancing';
-        startPos = pickZoneTarget('dance');
-      } else if (i < 8) {
-        startState = 'at_bar';
-        startPos = pickZoneTarget('bar');
-      } else {
-        startState = 'at_table';
-        startPos = pickZoneTarget(i === 8 ? 'table1' : 'table2');
-      }
 
-      crowdNPCs.push({
+    // Initialize group relocate timers
+    for (var g = 0; g < NPC_GROUPS.length; g++) {
+      NPC_GROUPS[g].relocateTimer = 20 + Math.random() * 15;
+    }
+
+    for (var i = 0; i < NPC_COUNT; i++) {
+      var groupIdx = getGroupForNPC(i);
+      var startPos = pickGroupDanceTarget(groupIdx);
+
+      var npc = {
         id: 'npc_' + i,
-        name: NPC_NAMES[i],
+        name: '',
         x: startPos.x,
         y: startPos.y,
         color: NPC_COLORS[i],
-        state: startState,
-        stateTimer: npcStateTimer(i),
+        state: 'dancing',
+        stateTimer: npcDanceTimer(),
         targetX: startPos.x,
         targetY: startPos.y,
         drinkState: 'none',
         drinkColor: null,
-        drinkTimer: 0
-      });
+        drinkTimer: 0,
+        groupIndex: groupIdx,
+        facingDx: 0,
+        facingDy: -1,
+        glanceTimer: 0,
+        glanceDuration: 0
+      };
+      computeDJFacing(npc);
+      crowdNPCs.push(npc);
+    }
+  }
+
+  function updateGroupCenters(dt) {
+    for (var g = 0; g < NPC_GROUPS.length; g++) {
+      var group = NPC_GROUPS[g];
+      group.relocateTimer -= dt;
+      if (group.relocateTimer <= 0) {
+        // Slowly relocate group center on dance floor
+        group.cx = randomInRange(200, 600);
+        group.cy = randomInRange(200, 380);
+        group.relocateTimer = 20 + Math.random() * 15; // 20-35s
+      }
     }
   }
 
   function updateCrowd(dt) {
+    updateGroupCenters(dt);
+
     for (var i = 0; i < crowdNPCs.length; i++) {
       var npc = crowdNPCs[i];
 
@@ -313,10 +352,12 @@
         if (dist < 3) {
           npc.x = npc.targetX;
           npc.y = npc.targetY;
-          npc.state = npc._destState || 'idle';
-          npc.stateTimer = npcStateTimer(i);
-          // Arrived at bar — start drink pickup timer
-          if (npc.state === 'at_bar' && npc.drinkState === 'none') {
+          npc.state = npc._destState || 'dancing';
+          if (npc.state === 'dancing') {
+            npc.stateTimer = npcDanceTimer();
+            computeDJFacing(npc);
+          } else if (npc.state === 'at_bar') {
+            // Start drink pickup timer (2-3s)
             npc._barWait = 2 + Math.random();
           }
         } else {
@@ -325,22 +366,40 @@
         }
       }
 
-      // State timer expired — pick new behavior
+      // State timer expired — party behavior loop
       if (npc.stateTimer <= 0 && npc.state !== 'walking') {
-        var next = pickNextState();
-        var zone = zoneForState(next);
-
-        if (zone) {
-          var target = pickZoneTarget(zone);
-          npc.targetX = target.x;
-          npc.targetY = target.y;
-          npc.state = 'walking';
-          npc._destState = next;
+        if (npc.state === 'dancing' && npc.drinkState === 'none') {
+          // Dancing without drink: 80% go to bar, 20% keep dancing
+          if (Math.random() < 0.80) {
+            var barTarget = pickBarTarget();
+            npc.targetX = barTarget.x;
+            npc.targetY = barTarget.y;
+            npc.state = 'walking';
+            npc._destState = 'at_bar';
+          } else {
+            // Keep dancing, pick new position near group
+            var dancePos = pickGroupDanceTarget(npc.groupIndex);
+            npc.targetX = dancePos.x;
+            npc.targetY = dancePos.y;
+            npc.state = 'walking';
+            npc._destState = 'dancing';
+          }
+        } else if (npc.state === 'dancing' && npc.drinkState === 'carrying') {
+          // Dancing with drink — drink timer handled below; when timer expires,
+          // dance briefly without drink then go to bar
+          // (drink consumed, stay dancing a bit then go to bar on next timer)
+          npc.stateTimer = 3 + Math.random() * 3; // brief dance without drink
+        } else if (npc.state === 'at_bar') {
+          // Shouldn't normally expire here; bar wait handles transition
+          npc.stateTimer = 2;
         } else {
-          // idle — stay in place
-          npc.state = 'idle';
+          // Fallback: go dance
+          var fallbackPos = pickGroupDanceTarget(npc.groupIndex);
+          npc.targetX = fallbackPos.x;
+          npc.targetY = fallbackPos.y;
+          npc.state = 'walking';
+          npc._destState = 'dancing';
         }
-        npc.stateTimer = npcStateTimer(i);
       }
 
       // Bar drink pickup
@@ -349,19 +408,52 @@
         if (npc._barWait <= 0) {
           npc.drinkState = 'carrying';
           npc.drinkColor = DRINK_COLORS[Math.floor(Math.random() * DRINK_COLORS.length)];
-          npc.drinkTimer = 10 + Math.random() * 10;
+          npc.drinkTimer = npcDrinkTimer();
           delete npc._barWait;
+          // Head back to dance floor with drink
+          var danceTarget = pickGroupDanceTarget(npc.groupIndex);
+          npc.targetX = danceTarget.x;
+          npc.targetY = danceTarget.y;
+          npc.state = 'walking';
+          npc._destState = 'dancing';
         }
       }
 
-      // Drink timer — drop after duration or when dancing
+      // Drink timer — consume after duration (no longer dropped when dancing)
       if (npc.drinkState === 'carrying') {
         npc.drinkTimer -= dt;
-        if (npc.drinkTimer <= 0 || npc.state === 'dancing') {
+        if (npc.drinkTimer <= 0) {
           npc.drinkState = 'none';
           npc.drinkColor = null;
           npc.drinkTimer = 0;
         }
+      }
+
+      // Facing: face DJ while dancing, with occasional glances
+      if (npc.state === 'dancing') {
+        npc.glanceTimer -= dt;
+        if (npc.glanceTimer <= 0 && npc.glanceDuration <= 0) {
+          // ~2% chance per second to glance (check every frame)
+          if (Math.random() < 0.02 * dt) {
+            var gAngle = Math.random() * Math.PI * 2;
+            npc.facingDx = Math.cos(gAngle);
+            npc.facingDy = Math.sin(gAngle);
+            npc.glanceDuration = 1 + Math.random(); // 1-2s
+            npc.glanceTimer = 0;
+          }
+        }
+        if (npc.glanceDuration > 0) {
+          npc.glanceDuration -= dt;
+          if (npc.glanceDuration <= 0) {
+            // Snap back to facing DJ
+            computeDJFacing(npc);
+            npc.glanceDuration = 0;
+          }
+        }
+      } else if (npc.state === 'walking') {
+        // While walking, face movement direction (handled by renderer)
+        npc.facingDx = 0;
+        npc.facingDy = 0;
       }
 
       // Clamp to world bounds
