@@ -161,6 +161,23 @@
     LED_WALL_ROWS: 7
   };
 
+  // ─── Moving Heads (ground-mounted, in front of PA stacks) ─────────────
+  // 4 per side, positioned at the stage lip in front of each PA
+  var MOVING_HEADS_LEFT = [
+    { x: 174, y: 80 },
+    { x: 187, y: 80 },
+    { x: 200, y: 80 },
+    { x: 213, y: 80 }
+  ];
+  var MOVING_HEADS_RIGHT = [
+    { x: 488, y: 80 },
+    { x: 501, y: 80 },
+    { x: 514, y: 80 },
+    { x: 527, y: 80 }
+  ];
+  var MH_FIXTURE_ELEV = 3;  // head height above ground
+  var MH_BEAM_LENGTH = 140; // world-unit reach of beams
+
   // ─── Utility functions ────────────────────────────────────────────────
 
   function darkenColor(hex, factor) {
@@ -1226,6 +1243,393 @@
       ctx.fillStyle = cgr;
       ctx.fillRect(centerScreen.x - beamR * 1.5, centerScreen.y - beamR * 1.5, beamR * 3, beamR * 3);
     }
+  }
+
+  // ─── Moving Heads (ground-mounted, lightshow-synced) ──────────────────
+
+  // Helper: get drop-look target pan/tilt/color for a given look index
+  function getDropLookTarget(look, index, side, mirror, t) {
+    var pan, tilt, r, g, b;
+    switch (look) {
+      case 0: // Ballyhoo — all beams straight up, slight fan
+        pan = (index - 1.5) * 0.12 * mirror;
+        tilt = 1.35 + Math.sin(t * 2.5 + index) * 0.08;
+        r = 255; g = 255; b = 255;
+        break;
+      case 1: // Fan out — spread wide from each side
+        pan = (index - 1.5) * 0.45 * mirror;
+        tilt = 0.95 + index * 0.08;
+        r = 255; g = 20; b = 160;
+        break;
+      case 2: // Converge center — all beams toward dance floor center
+        pan = (side === 'left' ? 0.35 : -0.35) + (index - 1.5) * 0.04;
+        tilt = 0.65;
+        r = 0; g = 200; b = 255;
+        break;
+      case 3: // Cross beams — left shoots right, right shoots left
+        pan = (side === 'left' ? 0.7 : -0.7);
+        tilt = 0.85 + (index - 1.5) * 0.12;
+        r = 80; g = 40; b = 255;
+        break;
+      default:
+        pan = 0; tilt = 1.0; r = 255; g = 255; b = 255;
+    }
+    return { pan: pan, tilt: tilt, r: r, g: g, b: b };
+  }
+
+  function getMovingHeadState(index, side, ls, t) {
+    var beatFrac = ls.beat % 1;
+    var onBeat = Math.pow(Math.max(0, 1 - beatFrac * 5), 2);
+    // Phase offset: each fixture slightly delayed for wave effect
+    var ph = index * 0.4 + (side === 'right' ? Math.PI : 0);
+    var mirror = (side === 'right') ? -1 : 1;
+
+    var pan, tilt, r, g, b, intensity, beamWidth;
+
+    switch (ls.name) {
+
+      case 'intro':
+        // Slow synchronized sweep, warm white, gentle tilt
+        pan = Math.sin(t * 0.2 + ph) * 0.6 * mirror;
+        tilt = 1.1 + Math.sin(t * 0.15 + index * 0.5) * 0.15;
+        r = 255; g = 200; b = 150;
+        intensity = 0.2 + ls.progress * 0.2;
+        beamWidth = 7;
+        break;
+
+      case 'breakdown':
+        // Slow atmospheric sweeps, mirrored pairs, deep blue/teal
+        var inner = (index < 2) ? 1 : -1;
+        pan = Math.sin(t * 0.15 + ph * 0.5) * 1.0 * inner * mirror;
+        tilt = 0.9 + Math.sin(t * 0.1 + index * 0.8) * 0.35;
+        var hShift = Math.sin(t * 0.08 + index * 0.7);
+        r = 30 + Math.max(0, hShift) * 40;
+        g = 50 + Math.abs(hShift) * 50;
+        b = 190 + hShift * 50;
+        intensity = 0.25 + Math.sin(t * 0.2 + index) * 0.08;
+        beamWidth = 9;
+        break;
+
+      case 'buildup':
+        // Accelerating movement, converging, blue→white
+        var speed = 0.4 + ls.progress * 3.5;
+        var range = 1.2 - ls.progress * 0.8;
+        pan = Math.sin(t * speed + ph) * range * mirror;
+        tilt = 1.0 + Math.sin(t * speed * 0.6 + index) * 0.25;
+        // Last 30%: rapid vibration layered on top
+        if (ls.progress > 0.7) {
+          var vib = (ls.progress - 0.7) / 0.3;
+          pan += Math.sin(t * 14 + index * 2) * 0.1 * vib;
+          tilt += Math.sin(t * 10 + index * 1.5) * 0.06 * vib;
+        }
+        var wt = ls.progress;
+        r = 80 + wt * 175; g = 100 + wt * 155; b = 255;
+        intensity = 0.25 + ls.progress * 0.55;
+        beamWidth = 8 - ls.progress * 3;
+        break;
+
+      case 'drop':
+        // Smooth easing between beat-synced look positions
+        var curLook = Math.floor(ls.beatInPhase) % 4;
+        var prevLook = (curLook + 3) % 4; // previous look (wraps)
+
+        // Smoothstep ease: fast move in first ~35% of beat, settle by ~50%
+        var ease = Math.min(1, beatFrac * 2.8);
+        ease = ease * ease * (3 - 2 * ease); // smoothstep
+
+        var cur = getDropLookTarget(curLook, index, side, mirror, t);
+        var prev = getDropLookTarget(prevLook, index, side, mirror, t);
+
+        // Interpolate pan, tilt, and color
+        pan  = prev.pan  + (cur.pan  - prev.pan)  * ease;
+        tilt = prev.tilt + (cur.tilt - prev.tilt) * ease;
+        r = prev.r + (cur.r - prev.r) * ease;
+        g = prev.g + (cur.g - prev.g) * ease;
+        b = prev.b + (cur.b - prev.b) * ease;
+
+        intensity = 0.6 + onBeat * 0.4;
+        beamWidth = 5;
+        break;
+
+      case 'outro':
+        // Slowing, dimming, returning to gentle pan
+        var fadeSpd = 0.25 * (1 - ls.progress * 0.7);
+        pan = Math.sin(t * fadeSpd + ph) * 0.5 * mirror;
+        tilt = 1.1 + Math.sin(t * 0.15 + index * 0.5) * 0.12;
+        r = 60; g = 80; b = 180;
+        intensity = 0.25 * (1 - ls.progress);
+        beamWidth = 7;
+        break;
+
+      default:
+        pan = 0; tilt = 1.0;
+        r = 150; g = 150; b = 200;
+        intensity = 0.1; beamWidth = 6;
+    }
+
+    return {
+      pan: pan, tilt: tilt,
+      r: Math.round(Math.max(0, Math.min(255, r))),
+      g: Math.round(Math.max(0, Math.min(255, g))),
+      b: Math.round(Math.max(0, Math.min(255, b))),
+      intensity: intensity, beamWidth: beamWidth
+    };
+  }
+
+  function drawMovingHeads() {
+    if ((Game.currentRoom || 'main') !== 'main') return;
+
+    var t = animTime / 1000;
+    var ls = getLightshowState(animTime);
+    var s = TILE_SCALE;
+
+    var groups = [
+      { positions: MOVING_HEADS_LEFT,  side: 'left'  },
+      { positions: MOVING_HEADS_RIGHT, side: 'right' }
+    ];
+
+    // Fixture geometry (screen-space, scaled)
+    var yokeH   = 16 * s;  // yoke arm height
+    var yokeW   = 7 * s;   // spacing between arms
+    var headLen = 12 * s;   // head housing length (pivot to lens)
+    var headW   = 7 * s;    // head housing width
+    var lensR   = headW * 0.34; // lens radius
+
+    // ── Pre-compute all fixture states ──
+    var fixtures = [];
+    for (var gi = 0; gi < groups.length; gi++) {
+      var grp = groups[gi];
+      for (var i = 0; i < grp.positions.length; i++) {
+        var pos = grp.positions[i];
+        var p = getMovingHeadState(i, grp.side, ls, t);
+
+        var groundScr = worldToScreen(pos.x, pos.y);
+        var pivotSY = groundScr.y - yokeH; // pivot at top of yoke
+
+        // Beam endpoint in world space
+        var endWX = pos.x + Math.sin(p.pan) * Math.cos(p.tilt) * MH_BEAM_LENGTH;
+        var endWY = pos.y + Math.cos(p.pan) * Math.cos(p.tilt) * MH_BEAM_LENGTH;
+        var endElev = Math.sin(p.tilt) * MH_BEAM_LENGTH + MH_FIXTURE_ELEV;
+        var endScr = worldToScreen(endWX, endWY);
+        var endSY = endScr.y - endElev * HEIGHT_SCALE;
+
+        // Head direction in screen space (from pivot toward beam endpoint)
+        var dx = endScr.x - groundScr.x;
+        var dy = endSY - pivotSY;
+        var beamLen = Math.sqrt(dx * dx + dy * dy);
+        var headAngle = beamLen > 0 ? Math.atan2(dy, dx) : -Math.PI / 2;
+
+        // Lens position (tip of the head housing)
+        var lensSX = groundScr.x + Math.cos(headAngle) * headLen;
+        var lensSY = pivotSY + Math.sin(headAngle) * headLen;
+
+        fixtures.push({
+          pos: pos, p: p,
+          gx: groundScr.x, gy: groundScr.y,
+          pivotSY: pivotSY,
+          endScr: endScr, endSY: endSY,
+          headAngle: headAngle,
+          lensSX: lensSX, lensSY: lensSY,
+          dx: dx, dy: dy, beamLen: beamLen
+        });
+      }
+    }
+
+    // ── Phase 1: fixture bodies (normal blending) ──
+    for (var fi = 0; fi < fixtures.length; fi++) {
+      var f = fixtures[fi];
+      var gx = f.gx, gy = f.gy;
+      var col = f.p.r + ',' + f.p.g + ',' + f.p.b;
+
+      // ─ Base housing (rectangular block with feet) ─
+      var baseW = 14 * s, baseH = 6 * s;
+
+      // Base front face (gives depth)
+      ctx.fillStyle = '#141416';
+      ctx.fillRect(gx - baseW * 0.42, gy - 0.5 * s, baseW * 0.84, 4.5 * s);
+
+      // Base top face (isometric diamond)
+      ctx.fillStyle = '#1c1c1e';
+      ctx.beginPath();
+      ctx.moveTo(gx - baseW * 0.5, gy);
+      ctx.lineTo(gx, gy - baseH * 0.5);
+      ctx.lineTo(gx + baseW * 0.5, gy);
+      ctx.lineTo(gx, gy + baseH * 0.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#28282c';
+      ctx.lineWidth = Math.max(0.5, 0.7 * s);
+      ctx.stroke();
+
+      // Display panel on base front (like the blue LCD)
+      var panelW = baseW * 0.35, panelH = 2 * s;
+      ctx.fillStyle = '#0a1428';
+      ctx.fillRect(gx - panelW * 0.5, gy + 0.3 * s, panelW, panelH);
+      ctx.strokeStyle = '#1a2a48';
+      ctx.lineWidth = Math.max(0.3, 0.4 * s);
+      ctx.strokeRect(gx - panelW * 0.5, gy + 0.3 * s, panelW, panelH);
+
+      // ─ Yoke arms (two vertical strokes from base to pivot) ─
+      // Outer edge (darker)
+      ctx.strokeStyle = '#1e1e22';
+      ctx.lineWidth = Math.max(1.5, 2.5 * s);
+      // Left arm
+      ctx.beginPath();
+      ctx.moveTo(gx - yokeW * 0.5, gy - 2 * s);
+      ctx.lineTo(gx - yokeW * 0.5, f.pivotSY);
+      ctx.stroke();
+      // Right arm
+      ctx.beginPath();
+      ctx.moveTo(gx + yokeW * 0.5, gy - 2 * s);
+      ctx.lineTo(gx + yokeW * 0.5, f.pivotSY);
+      ctx.stroke();
+
+      // Inner highlight (lighter edge for 3D look)
+      ctx.strokeStyle = '#2a2a2e';
+      ctx.lineWidth = Math.max(0.5, 0.8 * s);
+      ctx.beginPath();
+      ctx.moveTo(gx - yokeW * 0.5 + 1.2 * s, gy - 2 * s);
+      ctx.lineTo(gx - yokeW * 0.5 + 1.2 * s, f.pivotSY);
+      ctx.moveTo(gx + yokeW * 0.5 - 1.2 * s, gy - 2 * s);
+      ctx.lineTo(gx + yokeW * 0.5 - 1.2 * s, f.pivotSY);
+      ctx.stroke();
+
+      // ─ Head housing (rotates around yoke pivot) ─
+      ctx.save();
+      ctx.translate(gx, f.pivotSY);
+      ctx.rotate(f.headAngle);
+
+      // Head body (rectangle extending from pivot toward lens)
+      ctx.fillStyle = '#1a1a1d';
+      ctx.fillRect(0, -headW * 0.42, headLen * 0.85, headW * 0.84);
+      // Head edge highlight
+      ctx.strokeStyle = '#2a2a2f';
+      ctx.lineWidth = Math.max(0.7, 0.8 * s);
+      ctx.strokeRect(0, -headW * 0.42, headLen * 0.85, headW * 0.84);
+
+      // Ventilation slits on side of head
+      ctx.strokeStyle = 'rgba(40,40,46,0.7)';
+      ctx.lineWidth = Math.max(0.5, 0.6 * s);
+      for (var vi = 0; vi < 4; vi++) {
+        var vx = headLen * (0.15 + vi * 0.14);
+        ctx.beginPath();
+        ctx.moveTo(vx, -headW * 0.42);
+        ctx.lineTo(vx, -headW * 0.12);
+        ctx.stroke();
+      }
+
+      // Lens barrel (dark ring at the front of the head)
+      var lensX = headLen * 0.85;
+      ctx.fillStyle = '#0e0e10';
+      ctx.beginPath();
+      ctx.arc(lensX, 0, lensR * 1.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#222226';
+      ctx.lineWidth = Math.max(0.7, 1 * s);
+      ctx.stroke();
+
+      // Inner lens (dark glass)
+      ctx.fillStyle = '#080808';
+      ctx.beginPath();
+      ctx.arc(lensX, 0, lensR, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Lens glow (beam color, intensity-driven)
+      if (f.p.intensity > 0.01) {
+        ctx.fillStyle = 'rgba(' + col + ',' + Math.min(1, f.p.intensity * 0.95).toFixed(3) + ')';
+        ctx.beginPath();
+        ctx.arc(lensX, 0, lensR * 0.75, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    // ── Phase 2: beams from lens (additive blending) ──
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+
+    for (var fi = 0; fi < fixtures.length; fi++) {
+      var f = fixtures[fi];
+      var p = f.p;
+      if (p.intensity < 0.01 || f.beamLen < 1) continue;
+
+      // Beam originates from the lens
+      var sx = f.lensSX, sy = f.lensSY;
+      var ex = f.endScr.x, ey = f.endSY;
+
+      // Direction vector & perpendicular for cone shape
+      var dx = ex - sx;
+      var dy = ey - sy;
+      var bLen = Math.sqrt(dx * dx + dy * dy);
+      if (bLen < 1) continue;
+      var nx = -dy / bLen;
+      var ny = dx / bLen;
+
+      var col = p.r + ',' + p.g + ',' + p.b;
+
+      // Layer 1 — Haze cone (wide, atmospheric glow)
+      var hazeA = p.intensity * 0.07;
+      var hzSW = 3 * s;
+      var hzEW = p.beamWidth * s * 3.5;
+
+      ctx.beginPath();
+      ctx.moveTo(sx - nx * hzSW, sy - ny * hzSW);
+      ctx.lineTo(ex - nx * hzEW, ey - ny * hzEW);
+      ctx.lineTo(ex + nx * hzEW, ey + ny * hzEW);
+      ctx.lineTo(sx + nx * hzSW, sy + ny * hzSW);
+      ctx.closePath();
+      var hgr = ctx.createLinearGradient(sx, sy, ex, ey);
+      hgr.addColorStop(0, 'rgba(' + col + ',' + (hazeA * 1.4).toFixed(4) + ')');
+      hgr.addColorStop(0.5, 'rgba(' + col + ',' + hazeA.toFixed(4) + ')');
+      hgr.addColorStop(1, 'rgba(' + col + ',0)');
+      ctx.fillStyle = hgr;
+      ctx.fill();
+
+      // Layer 2 — Main beam cone
+      var beamA = p.intensity * 0.25;
+      var bmSW = 1.5 * s;
+      var bmEW = p.beamWidth * s * 1.2;
+
+      ctx.beginPath();
+      ctx.moveTo(sx - nx * bmSW, sy - ny * bmSW);
+      ctx.lineTo(ex - nx * bmEW, ey - ny * bmEW);
+      ctx.lineTo(ex + nx * bmEW, ey + ny * bmEW);
+      ctx.lineTo(sx + nx * bmSW, sy + ny * bmSW);
+      ctx.closePath();
+      var bgr = ctx.createLinearGradient(sx, sy, ex, ey);
+      bgr.addColorStop(0, 'rgba(' + col + ',' + (beamA * 1.8).toFixed(4) + ')');
+      bgr.addColorStop(0.4, 'rgba(' + col + ',' + beamA.toFixed(4) + ')');
+      bgr.addColorStop(1, 'rgba(' + col + ',0)');
+      ctx.fillStyle = bgr;
+      ctx.fill();
+
+      // Layer 3 — Bright core line
+      var coreA = p.intensity * 0.4;
+      var cgr = ctx.createLinearGradient(sx, sy, ex, ey);
+      cgr.addColorStop(0, 'rgba(' + col + ',' + (coreA * 1.5).toFixed(4) + ')');
+      cgr.addColorStop(0.3, 'rgba(' + col + ',' + coreA.toFixed(4) + ')');
+      cgr.addColorStop(1, 'rgba(' + col + ',0)');
+      ctx.strokeStyle = cgr;
+      ctx.lineWidth = Math.max(1, 1.5 * s);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+
+      // Lens bloom (glow around the lens opening)
+      var glowR = 6 * s;
+      var lgr = ctx.createRadialGradient(sx, sy, 0, sx, sy, glowR);
+      lgr.addColorStop(0, 'rgba(' + col + ',' + (p.intensity * 0.8).toFixed(4) + ')');
+      lgr.addColorStop(0.4, 'rgba(' + col + ',' + (p.intensity * 0.25).toFixed(4) + ')');
+      lgr.addColorStop(1, 'rgba(' + col + ',0)');
+      ctx.fillStyle = lgr;
+      ctx.beginPath();
+      ctx.arc(sx, sy, glowR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
   }
 
   // ─── Bar drawing ──────────────────────────────────────────────────────
@@ -2842,6 +3246,7 @@
       drawAtmosphericLights();
       drawPA(LAYOUT.PA_LEFT_X, LAYOUT.PA_LEFT_Y);
       drawPA(LAYOUT.PA_RIGHT_X, LAYOUT.PA_RIGHT_Y);
+      drawMovingHeads();
     } else if (room === 'backstage') {
       drawBackstageRoom();
     } else if (room === 'releases') {
