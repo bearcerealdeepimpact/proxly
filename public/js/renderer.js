@@ -36,20 +36,34 @@
   var playerMoveTime = {};   // pid -> timestamp of last movement
   var DANCE_IDLE_MS = 400;   // ms idle before dancing starts
   var DANCE_RAMP_MS = 600;   // ms to ramp up to full dance intensity
-  var DANCE_BPM = 140;       // beats per minute
+  var DANCE_BPM = 170;       // beats per minute (rave tempo)
   var DANCE_BEAT_MS = 60000 / DANCE_BPM;
 
-  // ─── EDM Lightshow state machine ──────────────────────────────────────
-  // Phases: intro(16bars) -> breakdown(16bars) -> buildup(8bars) -> drop(16bars) -> outro(8bars)
-  // 1 bar = 4 beats at 140bpm = ~1714ms
+  // ─── Rave / Hyperpop Lightshow state machine ─────────────────────────
+  // Phases: intro(16bars) -> breakdown(8bars) -> buildup(6bars) -> drop(24bars) -> outro(6bars)
+  // 1 bar = 4 beats at 170bpm = ~1412ms
   var LIGHTSHOW_BAR_MS = DANCE_BEAT_MS * 4;
   var LIGHTSHOW_PHASES = [
     { name: 'intro',     bars: 16 },
-    { name: 'breakdown', bars: 16 },
-    { name: 'buildup',   bars: 8 },
-    { name: 'drop',      bars: 16 },
-    { name: 'outro',     bars: 8 }
+    { name: 'breakdown', bars: 8 },
+    { name: 'buildup',   bars: 6 },
+    { name: 'drop',      bars: 24 },
+    { name: 'outro',     bars: 6 }
   ];
+
+  // Rave neon color palette for random selection
+  var RAVE_COLORS = [
+    {r:255,g:0,b:128},    // hot pink
+    {r:0,g:255,b:65},     // acid green
+    {r:80,g:0,b:255},     // UV purple
+    {r:255,g:255,b:0},    // electric yellow
+    {r:0,g:220,b:255},    // electric cyan
+    {r:255,g:80,b:0}      // neon orange
+  ];
+  function randomRaveColor(seed) {
+    var idx = Math.abs(Math.floor(seed)) % RAVE_COLORS.length;
+    return RAVE_COLORS[idx];
+  }
   var LIGHTSHOW_TOTAL_MS = 0;
   var LIGHTSHOW_PHASE_STARTS = [];
   (function () {
@@ -648,90 +662,104 @@
 
     switch (ls.name) {
       case 'intro':
-        // Gentle blue breathing, panels fade in column by column over the phase
+        // Rainbow wave — cycling HSL hues across columns
         var fadeIn = Math.min(1, ls.progress * cols - col * 0.8);
         fadeIn = Math.max(0, fadeIn);
-        var breathe = 0.4 + Math.sin(t * 1.2 + col * 0.4) * 0.3;
+        var breathe = 0.5 + Math.sin(t * 1.5 + col * 0.4) * 0.3;
         var bright = fadeIn * breathe;
-        r = Math.round(140 * bright);
-        g = Math.round(180 * bright);
-        b = Math.round(255 * bright);
+        var hueIntro = (t * 40 + col * (360 / cols)) % 360;
+        var hRad = hueIntro * Math.PI / 180;
+        r = Math.round((0.5 + 0.5 * Math.sin(hRad)) * 255 * bright);
+        g = Math.round((0.5 + 0.5 * Math.sin(hRad + 2.094)) * 255 * bright);
+        b = Math.round((0.5 + 0.5 * Math.sin(hRad + 4.189)) * 255 * bright);
         a = 1;
         break;
 
       case 'breakdown':
-        // Slow sweeping white/cyan waves, minimal, atmospheric
-        var wave = Math.sin(t * 0.8 + colN * Math.PI * 2 - rowN * 1.5);
-        var intensity = 0.15 + Math.max(0, wave) * 0.6;
-        // Color shifts between white and light blue
-        var blueShift = 0.5 + Math.sin(t * 0.3) * 0.5;
-        r = Math.round(255 * intensity * (1 - blueShift * 0.4));
-        g = Math.round(255 * intensity * (1 - blueShift * 0.2));
-        b = Math.round(255 * intensity);
+        // Glitchy pixel flicker — random panels flash random neon colors
+        var neonColors = [
+          {r:255,g:0,b:128}, {r:0,g:255,b:65}, {r:0,g:180,b:255}, {r:160,g:0,b:255}
+        ];
+        var flickerSeed = Math.floor(t * 8 + col * 7.3 + row * 13.7);
+        var flickerOn = (Math.sin(flickerSeed * 12.9898 + 78.233) * 43758.5453) % 1;
+        flickerOn = Math.abs(flickerOn);
+        if (flickerOn > 0.55) {
+          var nIdx = Math.floor(flickerOn * 397) % neonColors.length;
+          var nc = neonColors[nIdx];
+          var flkBright = 0.5 + flickerOn * 0.5;
+          r = Math.round(nc.r * flkBright);
+          g = Math.round(nc.g * flkBright);
+          b = Math.round(nc.b * flkBright);
+        } else {
+          r = Math.round(15 + flickerOn * 20);
+          g = Math.round(5 + flickerOn * 10);
+          b = Math.round(25 + flickerOn * 15);
+        }
         a = 1;
         break;
 
       case 'buildup':
-        // Accelerating flashes, getting faster and brighter toward end
-        // Speed increases from 2Hz to 16Hz
-        var speed = 2 + ls.progress * 14;
+        // Rapid accelerating rainbow strobes, all panels flashing in sync
+        var speed = 3 + ls.progress * 18;
         var flash = Math.sin(t * speed * Math.PI * 2);
-        // Tighten the on-time as we accelerate
-        var threshold = 0.5 - ls.progress * 0.4;
+        var threshold = 0.4 - ls.progress * 0.35;
         var on = flash > threshold ? 1 : 0;
-        // Rising brightness
-        var riseB = 0.3 + ls.progress * 0.7;
-        // Panels activate from center outward
-        var distFromCenter = Math.abs(colN - 0.5) * 2;
-        var panelActive = ls.progress > distFromCenter * 0.6 ? 1 : 0;
-        var bright2 = on * riseB * panelActive;
-        // White with increasing blue
-        r = Math.round(255 * bright2 * (0.9 - ls.progress * 0.3));
-        g = Math.round(255 * bright2 * (0.9 - ls.progress * 0.2));
-        b = Math.round(255 * bright2);
+        var riseB = 0.4 + ls.progress * 0.6;
+        var bright2 = on * riseB;
+        var hueBuild = (t * 120 * (1 + ls.progress * 3)) % 360;
+        var hB = hueBuild * Math.PI / 180;
+        r = Math.round((0.5 + 0.5 * Math.sin(hB)) * 255 * bright2);
+        g = Math.round((0.5 + 0.5 * Math.sin(hB + 2.094)) * 255 * bright2);
+        b = Math.round((0.5 + 0.5 * Math.sin(hB + 4.189)) * 255 * bright2);
         a = 1;
         break;
 
       case 'drop':
-        // Full energy: bright white/blue/cyan flashing on beat, color sweeps
+        // Full rainbow chaos — each panel cycles random neon colors on beat
         var beatPulse = Math.pow(Math.max(0, 1 - beatFrac * 4), 2);
-        var sweep = Math.sin(beat * 0.25 + colN * Math.PI * 3);
-        var colorMode = Math.floor(beat / 4) % 3;
-        var base = 0.25;
-        var peak = base + beatPulse * 0.75 + Math.max(0, sweep) * 0.2;
-        if (colorMode === 0) {
-          // White flash
-          r = Math.round(255 * peak);
-          g = Math.round(255 * peak);
-          b = Math.round(255 * peak);
-        } else if (colorMode === 1) {
-          // Blue/cyan
-          r = Math.round(100 * peak);
-          g = Math.round(200 * peak);
-          b = Math.round(255 * peak);
+        var panelSeed = Math.floor(beat) * 17 + col * 7 + row * 13;
+        var rc = randomRaveColor(panelSeed);
+        var base = 0.3;
+        var peak = base + beatPulse * 0.7;
+        // Full white flash every 8 beats
+        if (Math.floor(beat) % 8 === 0 && beatFrac < 0.12) {
+          r = 255; g = 255; b = 255;
         } else {
-          // White/light blue alternating columns
-          var isBlue = (col + Math.floor(beat / 2)) % 2;
-          r = Math.round((isBlue ? 80 : 255) * peak);
-          g = Math.round((isBlue ? 160 : 255) * peak);
-          b = Math.round(255 * peak);
+          r = Math.round(rc.r * peak);
+          g = Math.round(rc.g * peak);
+          b = Math.round(rc.b * peak);
+        }
+        // Glitch bar: random row shifts color abruptly
+        var glitchRow = Math.floor(Math.sin(Math.floor(beat * 2) * 4.37) * rows) % rows;
+        if (glitchRow < 0) glitchRow += rows;
+        if (row === glitchRow) {
+          var gc = randomRaveColor(Math.floor(beat * 2) + col);
+          r = Math.round(gc.r * 0.9);
+          g = Math.round(gc.g * 0.9);
+          b = Math.round(gc.b * 0.9);
         }
         a = 1;
         break;
 
       case 'outro':
-        // Fading white/blue glow, panels turn off row by row from top
+        // Rapid color drain — panels randomly flicker off with glitch-back-on
         var fadeOut = 1 - ls.progress;
-        var rowFade = Math.max(0, 1 - (ls.progress * rows - (rows - 1 - row)) * 0.8);
-        var glow = fadeOut * rowFade * (0.4 + Math.sin(t * 0.6 + col * 0.3) * 0.2);
-        r = Math.round(180 * glow);
-        g = Math.round(210 * glow);
-        b = Math.round(255 * glow);
+        var offSeed = (Math.sin(col * 12.98 + row * 78.23) * 43758.5) % 1;
+        offSeed = Math.abs(offSeed);
+        var panelOff = ls.progress > offSeed;
+        // Occasional glitch-back-on
+        var glitchBack = Math.sin(t * 12 + col * 5 + row * 3) > 0.92;
+        var glow = panelOff ? (glitchBack ? 0.6 : 0) : fadeOut * 0.5;
+        var hueOut = (t * 30 + col * 45) % 360;
+        var hO = hueOut * Math.PI / 180;
+        r = Math.round((0.5 + 0.5 * Math.sin(hO)) * 255 * glow);
+        g = Math.round((0.5 + 0.5 * Math.sin(hO + 2.094)) * 255 * glow);
+        b = Math.round((0.5 + 0.5 * Math.sin(hO + 4.189)) * 255 * glow);
         a = 1;
         break;
 
       default:
-        r = 40; g = 60; b = 120; a = 1;
+        r = 40; g = 20; b = 60; a = 1;
     }
 
     return { r: Math.min(255, r), g: Math.min(255, g), b: Math.min(255, b), a: a };
@@ -868,26 +896,32 @@
 
   function drawStrobe() {
     var ls = getLightshowState(animTime);
-    if (ls.name !== 'buildup') return;
-
-    // Strobe activates in the last 60% of the buildup, getting faster
-    if (ls.progress < 0.4) return;
-
-    var strobeProgress = (ls.progress - 0.4) / 0.6; // 0..1 within strobe zone
-    // Frequency ramps from 4Hz to 20Hz
-    var freq = 4 + strobeProgress * 16;
     var t = animTime / 1000;
-    var flash = Math.sin(t * freq * Math.PI * 2);
 
-    // Sharp on/off — tighter threshold as frequency increases
-    var threshold = 0.7 - strobeProgress * 0.3;
-    if (flash < threshold) return;
+    if (ls.name === 'buildup') {
+      // Strobe activates in the last 60% of the buildup, getting faster
+      if (ls.progress < 0.4) return;
 
-    // Intensity ramps up
-    var intensity = 0.15 + strobeProgress * 0.45;
+      var strobeProgress = (ls.progress - 0.4) / 0.6;
+      var freq = 4 + strobeProgress * 20;
+      var flash = Math.sin(t * freq * Math.PI * 2);
+      var threshold = 0.65 - strobeProgress * 0.3;
+      if (flash < threshold) return;
 
-    ctx.fillStyle = 'rgba(255,255,255,' + intensity.toFixed(3) + ')';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+      var intensity = 0.2 + strobeProgress * 0.55;
+      ctx.fillStyle = 'rgba(255,255,255,' + Math.min(0.75, intensity).toFixed(3) + ')';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    } else if (ls.name === 'drop') {
+      // During drop: color flash on every 4th beat
+      var beatInPhase = ls.beatInPhase;
+      var beatFrac = beatInPhase % 1;
+      if (Math.floor(beatInPhase) % 4 === 0 && beatFrac < 0.08) {
+        var rc = randomRaveColor(Math.floor(beatInPhase) * 3 + Math.floor(t * 7));
+        var intensity = 0.55 + beatFrac * 2;
+        ctx.fillStyle = 'rgba(' + rc.r + ',' + rc.g + ',' + rc.b + ',' + Math.min(0.75, intensity).toFixed(3) + ')';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    }
   }
 
   // ─── DJ Booth ──────────────────────────────────────────────────────────
@@ -931,23 +965,37 @@
   function drawLEDStrip(boothX, boothFrontY, boothW, boothElev) {
     var ledCount = 12;
     var liftPx = boothElev * HEIGHT_SCALE;
+    var ls = getLightshowState(animTime);
+    var beatFrac = ls.beat % 1;
+    var onBeat = beatFrac < 0.1;
+
     for (var i = 0; i < ledCount; i++) {
       var t = (i + 0.5) / ledCount;
       var wx = boothX + t * boothW;
       var screen = worldToScreen(wx, boothFrontY);
       var sy = screen.y - liftPx;
 
-      // Color-cycling via HSL based on animTime
-      var hue = ((animTime / 20) + i * 30) % 360;
-      ctx.fillStyle = 'hsl(' + hue + ', 100%, 55%)';
+      // Faster color-cycling (2.5x faster) via HSL
+      var hue = ((animTime / 8) + i * 30) % 360;
+
+      // Beat-sync: flash white momentarily on beat
+      if (onBeat) {
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      } else {
+        ctx.fillStyle = 'hsl(' + hue + ', 100%, 55%)';
+      }
       ctx.beginPath();
       ctx.arc(screen.x, sy, Math.max(1.5, 2.5 * TILE_SCALE), 0, Math.PI * 2);
       ctx.fill();
 
-      // Glow
-      ctx.fillStyle = 'hsla(' + hue + ', 100%, 50%, 0.3)';
+      // Bigger glow halos (radius 5 -> 8)
+      if (onBeat) {
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      } else {
+        ctx.fillStyle = 'hsla(' + hue + ', 100%, 50%, 0.35)';
+      }
       ctx.beginPath();
-      ctx.arc(screen.x, sy, Math.max(3, 5 * TILE_SCALE), 0, Math.PI * 2);
+      ctx.arc(screen.x, sy, Math.max(4, 8 * TILE_SCALE), 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -1050,8 +1098,8 @@
   function drawPA(baseX, baseY) {
     var ls = getLightshowState(animTime);
     var s = TILE_SCALE;
-    var beatPulse = Math.pow(Math.abs(Math.sin(ls.beat * Math.PI)), 4);
-    var bassPulse = Math.pow(Math.abs(Math.sin(ls.beat * Math.PI)), 6);
+    var beatPulse = Math.pow(Math.abs(Math.sin(ls.beat * Math.PI)), 8);
+    var bassPulse = Math.pow(Math.abs(Math.sin(ls.beat * Math.PI)), 8);
 
     // ── Dimensions ──
     var subW = 44, subD = 26, subH = 18;
@@ -1063,13 +1111,16 @@
     var arrayX = baseX + (subW - cabW) / 2;
     var arrayY = baseY + (subD - cabD) / 2;
 
-    // ── Bass pressure glow on floor ──
+    // ── Bass pressure glow on floor (cycling neon) ──
     if (bassPulse > 0.1) {
       var subCenter = worldToScreen(baseX + subW / 2, baseY + subD / 2);
       var glowR = 25 * s;
+      var bassColorIdx = Math.floor(ls.beat * 0.5) % 3;
+      var bassColors = [{r:255,g:0,b:128},{r:0,g:255,b:65},{r:0,g:180,b:255}];
+      var bc = bassColors[bassColorIdx];
       var gr = ctx.createRadialGradient(subCenter.x, subCenter.y, 0, subCenter.x, subCenter.y, glowR);
-      gr.addColorStop(0, 'rgba(60,30,120,' + (bassPulse * 0.12).toFixed(3) + ')');
-      gr.addColorStop(1, 'rgba(60,30,120,0)');
+      gr.addColorStop(0, 'rgba(' + bc.r + ',' + bc.g + ',' + bc.b + ',' + (bassPulse * 0.18).toFixed(3) + ')');
+      gr.addColorStop(1, 'rgba(' + bc.r + ',' + bc.g + ',' + bc.b + ',0)');
       ctx.fillStyle = gr;
       ctx.beginPath();
       ctx.arc(subCenter.x, subCenter.y, glowR, 0, Math.PI * 2);
@@ -1077,7 +1128,7 @@
     }
 
     // ── Ground subs (2 stacked) ──
-    var vib = bassPulse * 0.3;
+    var vib = bassPulse * 0.6;
     // Bottom sub
     drawRaisedBlockGradient(baseX, baseY + vib, subW, subD, subH,
       '#131315', '#0d0d0f', '#080809');
@@ -1157,9 +1208,14 @@
       ctx.lineTo(wgR.x, wgY + 0.8 * s);
       ctx.stroke();
 
-      // Waveguide slit glow (beat-reactive)
-      var wgAlpha = 0.06 + beatPulse * 0.35;
-      ctx.strokeStyle = 'rgba(170,195,255,' + wgAlpha.toFixed(3) + ')';
+      // Waveguide slit glow (beat-reactive, rainbow hue cycling)
+      var wgAlpha = 0.12 + beatPulse * 0.55;
+      var wgHue = (animTime / 1000 * 60 + i * 40) % 360;
+      var wgHRad = wgHue * Math.PI / 180;
+      var wgR2 = Math.round(128 + 127 * Math.sin(wgHRad));
+      var wgG2 = Math.round(128 + 127 * Math.sin(wgHRad + 2.094));
+      var wgB2 = Math.round(128 + 127 * Math.sin(wgHRad + 4.189));
+      ctx.strokeStyle = 'rgba(' + wgR2 + ',' + wgG2 + ',' + wgB2 + ',' + wgAlpha.toFixed(3) + ')';
       ctx.lineWidth = Math.max(1, 1.4 * s);
       ctx.beginPath();
       ctx.moveTo(wgL.x + 1 * s, wgY);
@@ -1167,9 +1223,9 @@
       ctx.stroke();
 
       // Bloom on strong beats
-      if (beatPulse > 0.4) {
+      if (beatPulse > 0.3) {
         var cx = (wgL.x + wgR.x) / 2;
-        ctx.fillStyle = 'rgba(130,160,255,' + (beatPulse * 0.08).toFixed(3) + ')';
+        ctx.fillStyle = 'rgba(' + wgR2 + ',' + wgG2 + ',' + wgB2 + ',' + (beatPulse * 0.12).toFixed(3) + ')';
         ctx.beginPath();
         ctx.arc(cx, wgY, 6 * s, 0, Math.PI * 2);
         ctx.fill();
@@ -1185,94 +1241,130 @@
     var beatFrac = ls.beat % 1;
     var onBeat = Math.pow(Math.max(0, 1 - beatFrac * 5), 2);
 
-    // Base intensities depend on lightshow phase
+    // Base intensities depend on lightshow phase (1.5x multiplied)
     var leftMult, rightMult;
     switch (ls.name) {
       case 'intro':
-        leftMult = 0.3 + ls.progress * 0.3;
-        rightMult = 0.2 + ls.progress * 0.2;
+        leftMult = (0.3 + ls.progress * 0.3) * 1.5;
+        rightMult = (0.2 + ls.progress * 0.2) * 1.5;
         break;
       case 'breakdown':
-        leftMult = 0.2 + Math.sin(t * 0.5) * 0.15;
-        rightMult = 0.2 + Math.sin(t * 0.7 + 1) * 0.15;
+        leftMult = (0.2 + Math.sin(t * 0.5) * 0.15) * 1.5;
+        rightMult = (0.2 + Math.sin(t * 0.7 + 1) * 0.15) * 1.5;
         break;
       case 'buildup':
-        leftMult = 0.3 + ls.progress * 0.7;
-        rightMult = 0.3 + ls.progress * 0.7;
+        leftMult = (0.3 + ls.progress * 0.7) * 1.5;
+        rightMult = (0.3 + ls.progress * 0.7) * 1.5;
         break;
       case 'drop':
-        leftMult = 0.5 + onBeat * 0.5;
-        rightMult = 0.5 + onBeat * 0.5;
+        leftMult = (0.5 + onBeat * 0.5) * 1.5;
+        rightMult = (0.5 + onBeat * 0.5) * 1.5;
         break;
       case 'outro':
-        leftMult = 0.5 * (1 - ls.progress);
-        rightMult = 0.4 * (1 - ls.progress);
+        leftMult = 0.5 * (1 - ls.progress) * 1.5;
+        rightMult = 0.4 * (1 - ls.progress) * 1.5;
         break;
       default:
-        leftMult = 0.3;
-        rightMult = 0.3;
+        leftMult = 0.45;
+        rightMult = 0.45;
     }
 
     var beamR = 100 * TILE_SCALE;
 
-    // Left: blue/cyan beam
+    // Left wash: hot pink/magenta with color switching during drop
     var leftScreen = worldToScreen(200, 280);
+    var leftR, leftG, leftB;
+    if (ls.name === 'drop' && Math.floor(ls.beat * 0.5) % 2 === 0) {
+      leftR = 0; leftG = 255; leftB = 65; // acid green flash
+    } else {
+      leftR = 255; leftG = 0; leftB = 128; // hot pink
+    }
     var lA = 0.08 * leftMult + Math.sin(t * 1.5) * 0.03 * leftMult;
     var lgr = ctx.createRadialGradient(leftScreen.x, leftScreen.y, 0, leftScreen.x, leftScreen.y, beamR);
-    lgr.addColorStop(0, 'rgba(60,120,255,' + lA.toFixed(3) + ')');
-    lgr.addColorStop(1, 'rgba(60,120,255,0)');
+    lgr.addColorStop(0, 'rgba(' + leftR + ',' + leftG + ',' + leftB + ',' + lA.toFixed(3) + ')');
+    lgr.addColorStop(1, 'rgba(' + leftR + ',' + leftG + ',' + leftB + ',0)');
     ctx.fillStyle = lgr;
     ctx.fillRect(leftScreen.x - beamR, leftScreen.y - beamR, beamR * 2, beamR * 2);
 
-    // Right: white/light blue beam
+    // Right wash: acid green/lime with color switching during drop
     var rightScreen = worldToScreen(600, 280);
+    var rightR, rightG, rightB;
+    if (ls.name === 'drop' && Math.floor(ls.beat * 0.5) % 2 === 0) {
+      rightR = 255; rightG = 0; rightB = 128; // hot pink flash
+    } else {
+      rightR = 0; rightG = 255; rightB = 65; // acid green
+    }
     var rA = 0.08 * rightMult + Math.sin(t * 2.0) * 0.03 * rightMult;
     var rgr = ctx.createRadialGradient(rightScreen.x, rightScreen.y, 0, rightScreen.x, rightScreen.y, beamR);
-    rgr.addColorStop(0, 'rgba(180,200,255,' + rA.toFixed(3) + ')');
-    rgr.addColorStop(1, 'rgba(180,200,255,0)');
+    rgr.addColorStop(0, 'rgba(' + rightR + ',' + rightG + ',' + rightB + ',' + rA.toFixed(3) + ')');
+    rgr.addColorStop(1, 'rgba(' + rightR + ',' + rightG + ',' + rightB + ',0)');
     ctx.fillStyle = rgr;
     ctx.fillRect(rightScreen.x - beamR, rightScreen.y - beamR, beamR * 2, beamR * 2);
 
-    // During drop: extra center flash on beat
-    if (ls.name === 'drop' && onBeat > 0.3) {
+    // During drop: rainbow-cycling center wash + full-canvas color flash every 8th beat
+    if (ls.name === 'drop') {
+      // Center wash cycles through rainbow
       var centerScreen = worldToScreen(400, 300);
-      var cA = onBeat * 0.12;
+      var cHue = (t * 90) % 360;
+      var cHRad = cHue * Math.PI / 180;
+      var cR = Math.round(128 + 127 * Math.sin(cHRad));
+      var cG = Math.round(128 + 127 * Math.sin(cHRad + 2.094));
+      var cB = Math.round(128 + 127 * Math.sin(cHRad + 4.189));
+      var cA = onBeat * 0.18 + 0.06;
       var cgr = ctx.createRadialGradient(centerScreen.x, centerScreen.y, 0, centerScreen.x, centerScreen.y, beamR * 1.5);
-      cgr.addColorStop(0, 'rgba(220,230,255,' + cA.toFixed(3) + ')');
-      cgr.addColorStop(1, 'rgba(220,230,255,0)');
+      cgr.addColorStop(0, 'rgba(' + cR + ',' + cG + ',' + cB + ',' + cA.toFixed(3) + ')');
+      cgr.addColorStop(1, 'rgba(' + cR + ',' + cG + ',' + cB + ',0)');
       ctx.fillStyle = cgr;
       ctx.fillRect(centerScreen.x - beamR * 1.5, centerScreen.y - beamR * 1.5, beamR * 3, beamR * 3);
+
+      // Full-canvas color flash every 8th beat
+      var beatFrac8 = ls.beat % 1;
+      if (Math.floor(ls.beatInPhase) % 8 === 0 && beatFrac8 < 0.06) {
+        var fc = randomRaveColor(Math.floor(ls.beatInPhase));
+        ctx.fillStyle = 'rgba(' + fc.r + ',' + fc.g + ',' + fc.b + ',0.12)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
     }
   }
 
   // ─── Moving Heads (ground-mounted, lightshow-synced) ──────────────────
 
-  // Helper: get drop-look target pan/tilt/color for a given look index
+  // Helper: get drop-look target pan/tilt/color for a given look index (6 looks)
   function getDropLookTarget(look, index, side, mirror, t) {
     var pan, tilt, r, g, b;
     switch (look) {
       case 0: // Ballyhoo — all beams straight up, slight fan
-        pan = (index - 1.5) * 0.12 * mirror;
-        tilt = 1.35 + Math.sin(t * 2.5 + index) * 0.08;
-        r = 255; g = 255; b = 255;
+        pan = (index - 1.5) * 0.15 * mirror;
+        tilt = 1.35 + Math.sin(t * 3.0 + index) * 0.1;
+        r = 255; g = 0; b = 128; // hot pink
         break;
       case 1: // Fan out — spread wide from each side
-        pan = (index - 1.5) * 0.45 * mirror;
-        tilt = 0.95 + index * 0.08;
-        r = 255; g = 20; b = 160;
+        pan = (index - 1.5) * 0.5 * mirror;
+        tilt = 0.95 + index * 0.1;
+        r = 0; g = 255; b = 65; // acid green
         break;
       case 2: // Converge center — all beams toward dance floor center
         pan = (side === 'left' ? 0.35 : -0.35) + (index - 1.5) * 0.04;
         tilt = 0.65;
-        r = 0; g = 200; b = 255;
+        r = 80; g = 0; b = 255; // UV purple
         break;
       case 3: // Cross beams — left shoots right, right shoots left
         pan = (side === 'left' ? 0.7 : -0.7);
         tilt = 0.85 + (index - 1.5) * 0.12;
-        r = 80; g = 40; b = 255;
+        r = 255; g = 255; b = 0; // electric yellow
+        break;
+      case 4: // Scatter — random angles per fixture
+        pan = Math.sin(t * 4.2 + index * 3.7 + (side === 'left' ? 0 : 5.1)) * 0.9 * mirror;
+        tilt = 0.5 + Math.abs(Math.sin(t * 3.1 + index * 2.3)) * 0.9;
+        r = 0; g = 220; b = 255; // electric cyan
+        break;
+      case 5: // Strobe fan — rapid narrow beams
+        pan = (index - 1.5) * 0.2 * mirror + Math.sin(t * 8 + index) * 0.15;
+        tilt = 1.2 + Math.sin(t * 6 + index * 1.7) * 0.15;
+        r = 255; g = 255; b = 255; // white strobe
         break;
       default:
-        pan = 0; tilt = 1.0; r = 255; g = 255; b = 255;
+        pan = 0; tilt = 1.0; r = 255; g = 0; b = 128;
     }
     return { pan: pan, tilt: tilt, r: r, g: g, b: b };
   }
@@ -1289,81 +1381,87 @@
     switch (ls.name) {
 
       case 'intro':
-        // Slow synchronized sweep, warm white, gentle tilt
-        pan = Math.sin(t * 0.2 + ph) * 0.6 * mirror;
-        tilt = 1.1 + Math.sin(t * 0.15 + index * 0.5) * 0.15;
-        r = 255; g = 200; b = 150;
-        intensity = 0.2 + ls.progress * 0.2;
+        // Faster sweeps, rainbow color cycling instead of warm white
+        pan = Math.sin(t * 0.5 + ph) * 0.7 * mirror;
+        tilt = 1.1 + Math.sin(t * 0.3 + index * 0.5) * 0.2;
+        var introHue = (t * 50 + index * 60) % 360;
+        var iHRad = introHue * Math.PI / 180;
+        r = 128 + 127 * Math.sin(iHRad);
+        g = 128 + 127 * Math.sin(iHRad + 2.094);
+        b = 128 + 127 * Math.sin(iHRad + 4.189);
+        intensity = 0.25 + ls.progress * 0.25;
         beamWidth = 7;
         break;
 
       case 'breakdown':
-        // Slow atmospheric sweeps, mirrored pairs, deep blue/teal
+        // Jittery movement with random noise, neon pink/green alternating
         var inner = (index < 2) ? 1 : -1;
-        pan = Math.sin(t * 0.15 + ph * 0.5) * 1.0 * inner * mirror;
-        tilt = 0.9 + Math.sin(t * 0.1 + index * 0.8) * 0.35;
-        var hShift = Math.sin(t * 0.08 + index * 0.7);
-        r = 30 + Math.max(0, hShift) * 40;
-        g = 50 + Math.abs(hShift) * 50;
-        b = 190 + hShift * 50;
-        intensity = 0.25 + Math.sin(t * 0.2 + index) * 0.08;
-        beamWidth = 9;
+        var basePan = Math.sin(t * 0.2 + ph * 0.5) * 1.0 * inner * mirror;
+        var noise = Math.sin(t * 7.3 + index * 13.7) * 0.15;
+        pan = basePan + noise;
+        tilt = 0.9 + Math.sin(t * 0.15 + index * 0.8) * 0.35 + Math.sin(t * 5.1 + index * 9.3) * 0.08;
+        if (index % 2 === 0) {
+          r = 255; g = 0; b = 128; // neon pink
+        } else {
+          r = 0; g = 255; b = 65; // acid green
+        }
+        intensity = 0.3 + Math.sin(t * 0.3 + index) * 0.1;
+        beamWidth = 8;
         break;
 
       case 'buildup':
-        // Accelerating movement, converging, blue→white
-        var speed = 0.4 + ls.progress * 3.5;
+        // More aggressive acceleration, earlier vibration onset
+        var speed = 0.5 + ls.progress * 6.0;
         var range = 1.2 - ls.progress * 0.8;
         pan = Math.sin(t * speed + ph) * range * mirror;
-        tilt = 1.0 + Math.sin(t * speed * 0.6 + index) * 0.25;
-        // Last 30%: rapid vibration layered on top
-        if (ls.progress > 0.7) {
-          var vib = (ls.progress - 0.7) / 0.3;
-          pan += Math.sin(t * 14 + index * 2) * 0.1 * vib;
-          tilt += Math.sin(t * 10 + index * 1.5) * 0.06 * vib;
+        tilt = 1.0 + Math.sin(t * speed * 0.6 + index) * 0.3;
+        // Vibration from 40% onward (earlier onset)
+        if (ls.progress > 0.4) {
+          var vib = (ls.progress - 0.4) / 0.6;
+          pan += Math.sin(t * 18 + index * 2) * 0.15 * vib;
+          tilt += Math.sin(t * 14 + index * 1.5) * 0.08 * vib;
         }
         var wt = ls.progress;
-        r = 80 + wt * 175; g = 100 + wt * 155; b = 255;
-        intensity = 0.25 + ls.progress * 0.55;
-        beamWidth = 8 - ls.progress * 3;
+        r = 255 * wt; g = 0 + wt * 255; b = 128 + wt * 127;
+        intensity = 0.3 + ls.progress * 0.6;
+        beamWidth = 7 - ls.progress * 3;
         break;
 
       case 'drop':
-        // Smooth easing between beat-synced look positions
-        var curLook = Math.floor(ls.beatInPhase) % 4;
-        var prevLook = (curLook + 3) % 4; // previous look (wraps)
+        // 6 looks total, faster beat transitions
+        var curLook = Math.floor(ls.beatInPhase) % 6;
+        var prevLook = (curLook + 5) % 6;
 
-        // Smoothstep ease: fast move in first ~35% of beat, settle by ~50%
-        var ease = Math.min(1, beatFrac * 2.8);
+        // Faster ease speed (4.0 instead of 2.8)
+        var ease = Math.min(1, beatFrac * 4.0);
         ease = ease * ease * (3 - 2 * ease); // smoothstep
 
         var cur = getDropLookTarget(curLook, index, side, mirror, t);
         var prev = getDropLookTarget(prevLook, index, side, mirror, t);
 
-        // Interpolate pan, tilt, and color
         pan  = prev.pan  + (cur.pan  - prev.pan)  * ease;
         tilt = prev.tilt + (cur.tilt - prev.tilt) * ease;
         r = prev.r + (cur.r - prev.r) * ease;
         g = prev.g + (cur.g - prev.g) * ease;
         b = prev.b + (cur.b - prev.b) * ease;
 
-        intensity = 0.6 + onBeat * 0.4;
+        intensity = 0.65 + onBeat * 0.35;
         beamWidth = 5;
         break;
 
       case 'outro':
-        // Slowing, dimming, returning to gentle pan
+        // Slowing, dimming, neon fade
         var fadeSpd = 0.25 * (1 - ls.progress * 0.7);
         pan = Math.sin(t * fadeSpd + ph) * 0.5 * mirror;
         tilt = 1.1 + Math.sin(t * 0.15 + index * 0.5) * 0.12;
-        r = 60; g = 80; b = 180;
+        r = 160; g = 0; b = 80;
         intensity = 0.25 * (1 - ls.progress);
         beamWidth = 7;
         break;
 
       default:
         pan = 0; tilt = 1.0;
-        r = 150; g = 150; b = 200;
+        r = 255; g = 0; b = 128;
         intensity = 0.1; beamWidth = 6;
     }
 
@@ -1604,8 +1702,8 @@
       ctx.fillStyle = bgr;
       ctx.fill();
 
-      // Layer 3 — Bright core line
-      var coreA = p.intensity * 0.4;
+      // Layer 3 — Bright core line (brighter alpha 0.6)
+      var coreA = p.intensity * 0.6;
       var cgr = ctx.createLinearGradient(sx, sy, ex, ey);
       cgr.addColorStop(0, 'rgba(' + col + ',' + (coreA * 1.5).toFixed(4) + ')');
       cgr.addColorStop(0.3, 'rgba(' + col + ',' + coreA.toFixed(4) + ')');
@@ -1616,6 +1714,21 @@
       ctx.moveTo(sx, sy);
       ctx.lineTo(ex, ey);
       ctx.stroke();
+
+      // Color fringing on beam edges
+      var fringeR = Math.min(255, p.r + 80);
+      var fringeB = Math.min(255, p.b + 80);
+      var fringeA = p.intensity * 0.08;
+      var frSW = bmSW * 1.6;
+      var frEW = bmEW * 1.5;
+      ctx.beginPath();
+      ctx.moveTo(sx - nx * frSW, sy - ny * frSW);
+      ctx.lineTo(ex - nx * frEW, ey - ny * frEW);
+      ctx.lineTo(ex - nx * frEW * 0.7, ey - ny * frEW * 0.7);
+      ctx.lineTo(sx - nx * frSW * 0.7, sy - ny * frSW * 0.7);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(' + fringeR + ',0,' + fringeB + ',' + fringeA.toFixed(4) + ')';
+      ctx.fill();
 
       // Lens bloom (glow around the lens opening)
       var glowR = 6 * s;
@@ -1768,7 +1881,7 @@
     return false;
   }
 
-  // 4 dance styles: bounce, wave, sway, robot
+  // 5 dance styles: bounce, wave, sway, robot, moshpit
   function getDanceParams(beat, styleIndex) {
     var d = {
       bounceY: 0,
@@ -1780,41 +1893,52 @@
       headBobY: 0
     };
 
-    switch (styleIndex % 4) {
-      case 0: // Bounce - pumping up and down, arms pump
-        d.bounceY = Math.abs(Math.sin(beat)) * 4.5;
-        d.leftArmAngle = 0.4 + Math.sin(beat) * 0.3;
-        d.rightArmAngle = 0.4 + Math.sin(beat + Math.PI * 0.5) * 0.3;
-        d.leftLegAngle = Math.sin(beat) * 0.2;
-        d.rightLegAngle = Math.sin(beat + Math.PI) * 0.2;
-        d.headBobY = Math.sin(beat * 2) * 1.5;
+    switch (styleIndex % 5) {
+      case 0: // Bounce - pumping up and down, arms pump (bigger)
+        d.bounceY = Math.abs(Math.sin(beat)) * 6.5;
+        d.leftArmAngle = 0.5 + Math.sin(beat) * 0.45;
+        d.rightArmAngle = 0.5 + Math.sin(beat + Math.PI * 0.5) * 0.45;
+        d.leftLegAngle = Math.sin(beat) * 0.25;
+        d.rightLegAngle = Math.sin(beat + Math.PI) * 0.25;
+        d.headBobY = Math.sin(beat * 2) * 2.0;
         break;
-      case 1: // Wave - hands up, waving side to side
-        d.bounceY = Math.abs(Math.sin(beat)) * 2.5;
-        d.leftArmAngle = 2.3 + Math.sin(beat) * 0.6;
-        d.rightArmAngle = 2.3 + Math.sin(beat + Math.PI) * 0.6;
-        d.leftLegAngle = Math.sin(beat * 0.5) * 0.12;
-        d.rightLegAngle = Math.sin(beat * 0.5 + Math.PI) * 0.12;
-        d.headBobY = Math.sin(beat) * 1.2;
+      case 1: // Wave - hands up, wider waving, faster oscillation
+        d.bounceY = Math.abs(Math.sin(beat)) * 3.5;
+        d.leftArmAngle = 2.5 + Math.sin(beat * 1.3) * 0.8;
+        d.rightArmAngle = 2.5 + Math.sin(beat * 1.3 + Math.PI) * 0.8;
+        d.leftLegAngle = Math.sin(beat * 0.7) * 0.18;
+        d.rightLegAngle = Math.sin(beat * 0.7 + Math.PI) * 0.18;
+        d.headBobY = Math.sin(beat * 1.3) * 1.5;
         break;
-      case 2: // Sway - side to side body movement
-        d.bounceY = Math.abs(Math.sin(beat * 0.5)) * 2;
-        d.swayX = Math.sin(beat) * 3.5;
-        d.leftArmAngle = 0.6 + Math.sin(beat + Math.PI) * 0.45;
-        d.rightArmAngle = 0.6 + Math.sin(beat) * 0.45;
-        d.leftLegAngle = Math.sin(beat) * 0.28;
-        d.rightLegAngle = Math.sin(beat + Math.PI) * 0.28;
-        d.headBobY = Math.sin(beat * 0.5) * 1.5;
+      case 2: // Sway - bigger side to side body movement
+        d.bounceY = Math.abs(Math.sin(beat * 0.5)) * 2.5;
+        d.swayX = Math.sin(beat) * 5.0;
+        d.leftArmAngle = 0.7 + Math.sin(beat + Math.PI) * 0.55;
+        d.rightArmAngle = 0.7 + Math.sin(beat) * 0.55;
+        d.leftLegAngle = Math.sin(beat) * 0.35;
+        d.rightLegAngle = Math.sin(beat + Math.PI) * 0.35;
+        d.headBobY = Math.sin(beat * 0.5) * 2.0;
         break;
-      case 3: // Robot - sharp snapping moves
+      case 3: // Robot - sharper snaps + head twitch
         var snap = Math.sin(beat);
-        var s = snap > 0.2 ? 1 : (snap < -0.2 ? -1 : snap / 0.2);
-        d.bounceY = (s + 1) * 1.8;
-        d.leftArmAngle = 1.2 + s * 0.9;
-        d.rightArmAngle = 1.2 - s * 0.9;
-        d.leftLegAngle = s * 0.18;
-        d.rightLegAngle = -s * 0.18;
-        d.headBobY = 0;
+        var s = snap > 0.15 ? 1 : (snap < -0.15 ? -1 : snap / 0.15);
+        d.bounceY = (s + 1) * 2.2;
+        d.leftArmAngle = 1.4 + s * 1.1;
+        d.rightArmAngle = 1.4 - s * 1.1;
+        d.leftLegAngle = s * 0.22;
+        d.rightLegAngle = -s * 0.22;
+        d.headBobY = Math.sin(beat * 4) * 0.8; // head twitch
+        break;
+      case 4: // Moshpit - chaotic bouncing with random direction changes
+        var chaos1 = Math.sin(beat * 1.7 + 3.14);
+        var chaos2 = Math.sin(beat * 2.3 + 1.57);
+        d.bounceY = Math.abs(Math.sin(beat * 1.5)) * 7.0;
+        d.swayX = chaos1 * 5.5 + Math.sin(beat * 3.1) * 2.5;
+        d.leftArmAngle = 1.8 + chaos2 * 1.2;
+        d.rightArmAngle = 1.8 - chaos1 * 1.2;
+        d.leftLegAngle = chaos1 * 0.35;
+        d.rightLegAngle = chaos2 * 0.35;
+        d.headBobY = Math.sin(beat * 3) * 2.5;
         break;
     }
 
@@ -2976,12 +3100,17 @@
       { x: 300, y: 120, label: 'Demo Drop' },
       { x: 480, y: 200, label: 'Bookings' }
     ];
-    var pulseAlpha = 0.4 + 0.3 * Math.sin(animTime / 600);
+    var pulseAlpha = 0.4 + 0.3 * Math.sin(animTime / 350);
     for (var m = 0; m < markers.length; m++) {
       var ms = worldToScreen(markers[m].x, markers[m].y);
+      var markerHue = (animTime / 5 + m * 120) % 360;
+      var mhRad = markerHue * Math.PI / 180;
+      var mR = Math.round(128 + 127 * Math.sin(mhRad));
+      var mG = Math.round(128 + 127 * Math.sin(mhRad + 2.094));
+      var mB = Math.round(128 + 127 * Math.sin(mhRad + 4.189));
       ctx.save();
       ctx.globalAlpha = pulseAlpha;
-      ctx.fillStyle = 'rgba(255,180,80,0.3)';
+      ctx.fillStyle = 'rgba(' + mR + ',' + mG + ',' + mB + ',0.35)';
       ctx.beginPath();
       ctx.arc(ms.x, ms.y, 10 * TILE_SCALE, 0, Math.PI * 2);
       ctx.fill();
@@ -3025,14 +3154,19 @@
       { x: 180, y: 250 },
       { x: 420, y: 250 }
     ];
-    var pulseAlpha = 0.4 + 0.3 * Math.sin(animTime / 600);
+    var pulseAlpha = 0.4 + 0.3 * Math.sin(animTime / 350);
     for (var i = 0; i < crates.length; i++) {
       drawRaisedBlockGradient(crates[i].x - 15, crates[i].y - 15, 30, 30, 8, '#3a3020', '#2a2218', '#221a10');
-      // Pulsing interactable indicator
+      // Pulsing interactable indicator (cycling neon)
       var cs = worldToScreen(crates[i].x, crates[i].y);
+      var crateHue = (animTime / 5 + i * 72) % 360;
+      var chRad = crateHue * Math.PI / 180;
+      var crR = Math.round(128 + 127 * Math.sin(chRad));
+      var crG = Math.round(128 + 127 * Math.sin(chRad + 2.094));
+      var crB = Math.round(128 + 127 * Math.sin(chRad + 4.189));
       ctx.save();
       ctx.globalAlpha = pulseAlpha;
-      ctx.fillStyle = 'rgba(255,200,120,0.3)';
+      ctx.fillStyle = 'rgba(' + crR + ',' + crG + ',' + crB + ',0.35)';
       ctx.beginPath();
       ctx.arc(cs.x, cs.y, 10 * TILE_SCALE, 0, Math.PI * 2);
       ctx.fill();
@@ -3064,34 +3198,49 @@
     // 2. Velvet purple walls (back + left)
     drawSubRoomWalls('#3a1a4a', '#2a1038', darkenColor('#2a1038', 0.7));
 
-    // 3. Neon sign rectangles at social_link interactable positions
-    var neonSigns = [
-      { x: 100, y: 80, w: 50, h: 14, color: '#ff00ff' },
-      { x: 250, y: 80, w: 50, h: 14, color: '#00ffff' },
-      { x: 400, y: 80, w: 50, h: 14, color: '#ff4488' }
+    // 3. Neon sign rectangles at social_link interactable positions (hyperactive)
+    var neonSignColors = [
+      {r:255,g:0,b:128},  // hot pink
+      {r:0,g:220,b:255},  // cyan
+      {r:0,g:255,b:65}    // acid green
     ];
-    var neonPulse = 0.6 + 0.4 * Math.sin(animTime / 400);
+    var neonSigns = [
+      { x: 100, y: 80, w: 50, h: 14 },
+      { x: 250, y: 80, w: 50, h: 14 },
+      { x: 400, y: 80, w: 50, h: 14 }
+    ];
+    var neonPulse = 0.6 + 0.4 * Math.sin(animTime / 200);
     for (var i = 0; i < neonSigns.length; i++) {
       var sign = neonSigns[i];
       var signCenter = worldToScreen(sign.x + sign.w / 2, sign.y + sign.h / 2);
       var signElev = 28 * HEIGHT_SCALE;
+
+      // Color cycling between hot pink, cyan, and acid green
+      var neonCycleIdx = (Math.floor(animTime / 300) + i) % neonSignColors.length;
+      var nc = neonSignColors[neonCycleIdx];
+      var neonColor = 'rgb(' + nc.r + ',' + nc.g + ',' + nc.b + ')';
+
+      // Random flicker effect (occasional brief dropout)
+      var flickerVal = Math.sin(animTime / 1000 * 17.3 + i * 5.7);
+      var flickerAlpha = flickerVal > 0.92 ? 0.1 : 1.0;
+
       // Neon glow
       ctx.save();
-      ctx.globalAlpha = neonPulse * 0.5;
-      ctx.fillStyle = sign.color;
-      ctx.shadowColor = sign.color;
-      ctx.shadowBlur = 18 * TILE_SCALE;
+      ctx.globalAlpha = neonPulse * 0.5 * flickerAlpha;
+      ctx.fillStyle = neonColor;
+      ctx.shadowColor = neonColor;
+      ctx.shadowBlur = 28 * TILE_SCALE;
       var nw = sign.w * TILE_SCALE * 0.6;
       var nh = sign.h * TILE_SCALE * 0.4;
       ctx.fillRect(signCenter.x - nw / 2, signCenter.y - signElev - nh / 2, nw, nh);
       ctx.restore();
       // Solid neon rectangle
       ctx.save();
-      ctx.globalAlpha = neonPulse;
-      ctx.strokeStyle = sign.color;
+      ctx.globalAlpha = neonPulse * flickerAlpha;
+      ctx.strokeStyle = neonColor;
       ctx.lineWidth = 2;
-      ctx.shadowColor = sign.color;
-      ctx.shadowBlur = 10 * TILE_SCALE;
+      ctx.shadowColor = neonColor;
+      ctx.shadowBlur = 14 * TILE_SCALE;
       ctx.strokeRect(signCenter.x - nw / 2, signCenter.y - signElev - nh / 2, nw, nh);
       ctx.restore();
     }
@@ -3129,19 +3278,36 @@
       return;
     }
 
-    var pulseAlpha = 0.4 + 0.3 * Math.sin(animTime / 500);
+    var pulseAlpha = 0.4 + 0.3 * Math.sin(animTime / 300);
+    var doorT = animTime / 1000;
 
     for (var i = 0; i < doors.length; i++) {
       var door = doors[i];
       var pts = worldRectToIsoDiamond(door.x, door.y, door.w, door.h);
 
+      // Rainbow color cycling for door glow
+      var doorHue = (animTime / 4 + i * 120) % 360;
+      var dhRad = doorHue * Math.PI / 180;
+      var dR = Math.round(128 + 127 * Math.sin(dhRad));
+      var dG = Math.round(128 + 127 * Math.sin(dhRad + 2.094));
+      var dB = Math.round(128 + 127 * Math.sin(dhRad + 4.189));
+      var doorColor = 'rgb(' + dR + ',' + dG + ',' + dB + ')';
+
+      // Glitch effect: every ~2 seconds, rapid flicker (3 quick on/off)
+      var glitchCycle = (doorT + i * 0.7) % 2.0;
+      var glitchAlpha = 1.0;
+      if (glitchCycle > 1.85) {
+        var gPhase = (glitchCycle - 1.85) / 0.15;
+        glitchAlpha = Math.sin(gPhase * Math.PI * 6) > 0 ? 1.0 : 0.15;
+      }
+
       // Draw glowing door frame
       ctx.save();
-      ctx.globalAlpha = pulseAlpha;
-      ctx.strokeStyle = door.color || '#44ccff';
+      ctx.globalAlpha = pulseAlpha * glitchAlpha;
+      ctx.strokeStyle = doorColor;
       ctx.lineWidth = 3;
-      ctx.shadowColor = door.color || '#44ccff';
-      ctx.shadowBlur = 12;
+      ctx.shadowColor = doorColor;
+      ctx.shadowBlur = 20;
 
       ctx.beginPath();
       ctx.moveTo(pts[0].x, pts[0].y);
@@ -3152,8 +3318,8 @@
       ctx.stroke();
 
       // Fill with subtle tint
-      ctx.globalAlpha = pulseAlpha * 0.2;
-      ctx.fillStyle = door.color || '#44ccff';
+      ctx.globalAlpha = pulseAlpha * 0.2 * glitchAlpha;
+      ctx.fillStyle = doorColor;
       ctx.fill();
 
       ctx.restore();
@@ -3164,12 +3330,12 @@
         var topY = Math.min(pts[0].y, pts[1].y, pts[2].y, pts[3].y);
 
         ctx.save();
-        ctx.globalAlpha = pulseAlpha + 0.2;
+        ctx.globalAlpha = (pulseAlpha + 0.2) * glitchAlpha;
         ctx.font = 'bold 11px monospace';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#000000';
         ctx.fillText(door.label, centerX, topY - 6);
-        ctx.fillStyle = door.color || '#44ccff';
+        ctx.fillStyle = doorColor;
         ctx.fillText(door.label, centerX, topY - 7);
         ctx.restore();
       }
