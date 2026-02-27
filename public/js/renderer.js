@@ -2424,9 +2424,20 @@
     }
 
     var radius = Game.CONSTANTS.PLAYER_RADIUS;
+    var appearance = player.appearance || null;
     var color;
+    var skinColor;
+    var hairStyle;
+    var hairColor;
+    var accessory;
 
-    if (isLocal) {
+    if (appearance) {
+      color = appearance.outfitColor;
+      skinColor = appearance.skinTone;
+      hairStyle = appearance.hairStyle;
+      hairColor = appearance.hairColor;
+      accessory = appearance.accessory;
+    } else if (isLocal) {
       color = COLORS.LOCAL_PLAYER;
     } else if (player.color) {
       color = player.color;
@@ -2674,7 +2685,7 @@
 
     // Hands
     var handSize = Math.max(1.5, 2 * TILE_SCALE);
-    ctx.fillStyle = lightenColor(color, 0.35);
+    ctx.fillStyle = skinColor ? lightenColor(skinColor, 0.1) : lightenColor(color, 0.35);
     ctx.beginPath();
     ctx.arc(lArmEndX, lArmEndY, handSize, 0, Math.PI * 2);
     ctx.fill();
@@ -2720,19 +2731,208 @@
     // Head also leans slightly with body
     var headLeanX = walkLeanX * moveBlend * 0.4;
     var headSx = sx + headLeanX;
+    var headBaseColor = skinColor || color;
     var headGrad = ctx.createRadialGradient(
       headSx - headR * TILE_SCALE * 0.25, headY - headR * TILE_SCALE * 0.25, headR * TILE_SCALE * 0.1,
       headSx, headY, headR * TILE_SCALE
     );
-    headGrad.addColorStop(0, lightenColor(color, 0.45));
-    headGrad.addColorStop(1, color);
+    headGrad.addColorStop(0, lightenColor(headBaseColor, 0.25));
+    headGrad.addColorStop(1, headBaseColor);
     ctx.fillStyle = headGrad;
     ctx.beginPath();
     ctx.arc(headSx, headY, headR * TILE_SCALE, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = darkenColor(color, 0.4);
+    ctx.strokeStyle = darkenColor(headBaseColor, 0.3);
     ctx.lineWidth = 0.8;
     ctx.stroke();
+
+    // ── Hair ──
+    if (hairStyle && hairStyle !== 'none') {
+      var hR = headR * TILE_SCALE;
+      var hc = hairColor || '#2a1506';
+      ctx.fillStyle = hc;
+
+      if (hairStyle === 'spiky') {
+        // Multiple triangular spikes pointing up
+        var spikeCount = 5;
+        for (var si = 0; si < spikeCount; si++) {
+          var spikeX = headSx + (si - (spikeCount - 1) / 2) * (hR * 0.4);
+          var spikeBaseY = headY - hR * 0.6;
+          var spikeH = hR * (0.7 + Math.sin(si * 1.8) * 0.3);
+          ctx.beginPath();
+          ctx.moveTo(spikeX - hR * 0.15, spikeBaseY);
+          ctx.lineTo(spikeX + hR * 0.05, spikeBaseY - spikeH);
+          ctx.lineTo(spikeX + hR * 0.15, spikeBaseY);
+          ctx.closePath();
+          ctx.fill();
+        }
+      } else if (hairStyle === 'mohawk') {
+        // Single tall ridge along center
+        ctx.beginPath();
+        ctx.moveTo(headSx - hR * 0.15, headY - hR * 0.5);
+        ctx.lineTo(headSx - hR * 0.08, headY - hR * 1.5);
+        ctx.lineTo(headSx + hR * 0.08, headY - hR * 1.5);
+        ctx.lineTo(headSx + hR * 0.15, headY - hR * 0.5);
+        ctx.closePath();
+        ctx.fill();
+        // Base strip
+        ctx.beginPath();
+        ctx.ellipse(headSx, headY - hR * 0.65, hR * 0.2, hR * 0.35, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (hairStyle === 'bun') {
+        // Round bun on top
+        ctx.beginPath();
+        ctx.arc(headSx, headY - hR * 1.1, hR * 0.45, 0, Math.PI * 2);
+        ctx.fill();
+        // Base hair
+        ctx.beginPath();
+        ctx.arc(headSx, headY, hR * 1.05, -Math.PI * 0.85, -Math.PI * 0.15);
+        ctx.lineWidth = hR * 0.25;
+        ctx.strokeStyle = hc;
+        ctx.stroke();
+        ctx.lineWidth = 0.8;
+      } else if (hairStyle === 'curly') {
+        // Several small overlapping circles
+        var curls = [
+          { x: -0.4, y: -0.7 }, { x: 0, y: -0.9 }, { x: 0.4, y: -0.7 },
+          { x: -0.55, y: -0.35 }, { x: 0.55, y: -0.35 },
+          { x: -0.3, y: -0.85 }, { x: 0.3, y: -0.85 }
+        ];
+        for (var ci = 0; ci < curls.length; ci++) {
+          ctx.beginPath();
+          ctx.arc(headSx + curls[ci].x * hR, headY + curls[ci].y * hR, hR * 0.3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (hairStyle === 'long') {
+        // Hair that hangs down past head on both sides
+        ctx.beginPath();
+        ctx.arc(headSx, headY, hR * 1.05, -Math.PI * 0.9, -Math.PI * 0.1);
+        ctx.lineWidth = hR * 0.3;
+        ctx.strokeStyle = hc;
+        ctx.stroke();
+        ctx.lineWidth = 0.8;
+        // Side strands hanging down
+        ctx.fillStyle = hc;
+        ctx.fillRect(headSx - hR * 1.05, headY - hR * 0.1, hR * 0.3, hR * 1.2);
+        ctx.fillRect(headSx + hR * 0.75, headY - hR * 0.1, hR * 0.3, hR * 1.2);
+        // Round off the bottoms
+        ctx.beginPath();
+        ctx.arc(headSx - hR * 0.9, headY + hR * 1.1, hR * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(headSx + hR * 0.9, headY + hR * 1.1, hR * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (hairStyle === 'buzz') {
+        // Very short hair - just a skull cap shape
+        ctx.beginPath();
+        ctx.arc(headSx, headY, hR * 1.04, -Math.PI * 0.85, -Math.PI * 0.15);
+        ctx.lineWidth = hR * 0.15;
+        ctx.strokeStyle = hc;
+        ctx.stroke();
+        ctx.lineWidth = 0.8;
+      } else if (hairStyle === 'ponytail') {
+        // Hair on top + tail going to one side
+        ctx.beginPath();
+        ctx.arc(headSx, headY, hR * 1.05, -Math.PI * 0.85, -Math.PI * 0.15);
+        ctx.lineWidth = hR * 0.2;
+        ctx.strokeStyle = hc;
+        ctx.stroke();
+        ctx.lineWidth = 0.8;
+        // Ponytail extending to the right-back
+        ctx.fillStyle = hc;
+        ctx.beginPath();
+        ctx.moveTo(headSx + hR * 0.6, headY - hR * 0.5);
+        ctx.quadraticCurveTo(headSx + hR * 1.6, headY - hR * 0.2, headSx + hR * 1.4, headY + hR * 0.8);
+        ctx.quadraticCurveTo(headSx + hR * 1.2, headY + hR * 0.5, headSx + hR * 0.5, headY - hR * 0.2);
+        ctx.closePath();
+        ctx.fill();
+      } else if (hairStyle === 'flat') {
+        // Flat rectangular top hair
+        ctx.fillStyle = hc;
+        var flatW = hR * 1.2;
+        var flatH = hR * 0.5;
+        ctx.fillRect(headSx - flatW, headY - hR - flatH * 0.5, flatW * 2, flatH);
+        // Round the top corners
+        ctx.beginPath();
+        ctx.arc(headSx - flatW, headY - hR - flatH * 0.5 + flatH * 0.3, flatH * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(headSx + flatW, headY - hR - flatH * 0.5 + flatH * 0.3, flatH * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // ── Accessory ──
+    if (accessory && accessory !== 'none') {
+      var hR2 = headR * TILE_SCALE;
+
+      if (accessory === 'glasses') {
+        var glassY = headY - hR2 * 0.1;
+        var glassSpread = hR2 * 0.38;
+        var glassR = hR2 * 0.28;
+        ctx.strokeStyle = '#333333';
+        ctx.lineWidth = Math.max(1, 1.2 * TILE_SCALE);
+        // Left lens
+        ctx.beginPath();
+        ctx.arc(headSx - glassSpread, glassY, glassR, 0, Math.PI * 2);
+        ctx.stroke();
+        // Right lens
+        ctx.beginPath();
+        ctx.arc(headSx + glassSpread, glassY, glassR, 0, Math.PI * 2);
+        ctx.stroke();
+        // Bridge
+        ctx.beginPath();
+        ctx.moveTo(headSx - glassSpread + glassR, glassY);
+        ctx.lineTo(headSx + glassSpread - glassR, glassY);
+        ctx.stroke();
+        // Lens tint
+        ctx.fillStyle = 'rgba(100,200,255,0.15)';
+        ctx.beginPath();
+        ctx.arc(headSx - glassSpread, glassY, glassR - 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(headSx + glassSpread, glassY, glassR - 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (accessory === 'cap') {
+        var capY = headY - hR2 * 0.55;
+        ctx.fillStyle = darkenColor(color, 0.5);
+        // Cap dome
+        ctx.beginPath();
+        ctx.ellipse(headSx, capY, hR2 * 1.1, hR2 * 0.5, 0, Math.PI, 0);
+        ctx.fill();
+        // Visor (brim)
+        ctx.fillStyle = darkenColor(color, 0.6);
+        ctx.beginPath();
+        ctx.ellipse(headSx + hR2 * 0.3, capY + hR2 * 0.05, hR2 * 0.9, hR2 * 0.15, 0.1, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (accessory === 'headphones') {
+        var hpY = headY - hR2 * 0.2;
+        ctx.strokeStyle = '#444444';
+        ctx.lineWidth = Math.max(1.5, 2 * TILE_SCALE);
+        // Headband arc
+        ctx.beginPath();
+        ctx.arc(headSx, headY - hR2 * 0.2, hR2 * 1.15, -Math.PI * 0.85, -Math.PI * 0.15);
+        ctx.stroke();
+        // Left ear cup
+        ctx.fillStyle = '#333333';
+        ctx.beginPath();
+        ctx.ellipse(headSx - hR2 * 1.08, hpY + hR2 * 0.15, hR2 * 0.25, hR2 * 0.35, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#555555';
+        ctx.beginPath();
+        ctx.ellipse(headSx - hR2 * 1.08, hpY + hR2 * 0.15, hR2 * 0.15, hR2 * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Right ear cup
+        ctx.fillStyle = '#333333';
+        ctx.beginPath();
+        ctx.ellipse(headSx + hR2 * 1.08, hpY + hR2 * 0.15, hR2 * 0.25, hR2 * 0.35, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#555555';
+        ctx.beginPath();
+        ctx.ellipse(headSx + hR2 * 1.08, hpY + hR2 * 0.15, hR2 * 0.15, hR2 * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
 
     // Eye dots
     var eyeSpread = headR * TILE_SCALE * 0.35;

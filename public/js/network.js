@@ -55,7 +55,8 @@
       send({
         type: 'join',
         name: player.name,
-        characterId: player.characterId
+        characterId: player.characterId,
+        appearance: player.appearance || null
       });
     };
 

@@ -26,6 +26,7 @@
     x: CONSTANTS.SPAWN_X,
     y: CONSTANTS.SPAWN_Y,
     characterId: Math.floor(Math.random() * 6),
+    appearance: null, // loaded after IIFE setup
     drinkState: 'none',
     drinkTimer: 0,
     drinkOrderTimer: 0,
@@ -271,6 +272,56 @@
 
   var NPC_COLORS = ['#e06090', '#60b080', '#b080e0', '#e0a050', '#50b0d0', '#d07070', '#70c070', '#a070d0', '#d0b040', '#60a0a0'];
 
+  // ─── Appearance system ──────────────────────────────────────────
+  var SKIN_TONES = ['#f5d0a9', '#e8b88a', '#d4956b', '#c07848', '#8d5524', '#6b3e1f', '#4a2810'];
+  var HAIR_STYLES = ['spiky', 'mohawk', 'bun', 'curly', 'long', 'buzz', 'ponytail', 'flat', 'none'];
+  var HAIR_COLORS = ['#2a1506', '#1a0a02', '#8b4513', '#d4a03c', '#c83232', '#e0e0e0', '#ff69b4', '#4a0080', '#00c8c8'];
+  var ACCESSORIES = ['none', 'glasses', 'cap', 'headphones'];
+
+  var NPC_APPEARANCES = [
+    { skinTone: '#f5d0a9', outfitColor: '#e06090', hairStyle: 'spiky',    hairColor: '#ff69b4', accessory: 'none' },
+    { skinTone: '#d4956b', outfitColor: '#60b080', hairStyle: 'mohawk',   hairColor: '#00c8c8', accessory: 'glasses' },
+    { skinTone: '#8d5524', outfitColor: '#b080e0', hairStyle: 'bun',      hairColor: '#1a0a02', accessory: 'none' },
+    { skinTone: '#e8b88a', outfitColor: '#e0a050', hairStyle: 'curly',    hairColor: '#d4a03c', accessory: 'headphones' },
+    { skinTone: '#c07848', outfitColor: '#50b0d0', hairStyle: 'long',     hairColor: '#2a1506', accessory: 'none' },
+    { skinTone: '#4a2810', outfitColor: '#d07070', hairStyle: 'buzz',     hairColor: '#1a0a02', accessory: 'cap' },
+    { skinTone: '#f5d0a9', outfitColor: '#70c070', hairStyle: 'ponytail', hairColor: '#c83232', accessory: 'glasses' },
+    { skinTone: '#6b3e1f', outfitColor: '#a070d0', hairStyle: 'flat',     hairColor: '#4a0080', accessory: 'none' },
+    { skinTone: '#e8b88a', outfitColor: '#d0b040', hairStyle: 'spiky',    hairColor: '#e0e0e0', accessory: 'headphones' },
+    { skinTone: '#d4956b', outfitColor: '#60a0a0', hairStyle: 'mohawk',   hairColor: '#8b4513', accessory: 'cap' }
+  ];
+
+  var DEFAULT_APPEARANCE = {
+    skinTone: '#e8b88a',
+    outfitColor: '#4488ff',
+    hairStyle: 'spiky',
+    hairColor: '#2a1506',
+    accessory: 'none'
+  };
+
+  function loadPlayerAppearance() {
+    try {
+      var saved = localStorage.getItem('proxly_appearance');
+      if (saved) {
+        var parsed = JSON.parse(saved);
+        return {
+          skinTone: parsed.skinTone || DEFAULT_APPEARANCE.skinTone,
+          outfitColor: parsed.outfitColor || DEFAULT_APPEARANCE.outfitColor,
+          hairStyle: parsed.hairStyle || DEFAULT_APPEARANCE.hairStyle,
+          hairColor: parsed.hairColor || DEFAULT_APPEARANCE.hairColor,
+          accessory: parsed.accessory || DEFAULT_APPEARANCE.accessory
+        };
+      }
+    } catch (e) {}
+    return JSON.parse(JSON.stringify(DEFAULT_APPEARANCE));
+  }
+
+  function savePlayerAppearance(appearance) {
+    try {
+      localStorage.setItem('proxly_appearance', JSON.stringify(appearance));
+    } catch (e) {}
+  }
+
   var NPC_GROUPS = [
     { members: [0, 1, 2], cx: 280, cy: 280, relocateTimer: 0 },
     { members: [3, 4, 5], cx: 420, cy: 300, relocateTimer: 0 },
@@ -345,7 +396,8 @@
         name: '',
         x: startPos.x,
         y: startPos.y,
-        color: NPC_COLORS[i],
+        color: NPC_APPEARANCES[i].outfitColor,
+        appearance: NPC_APPEARANCES[i],
         state: 'dancing',
         stateTimer: npcDanceTimer(),
         targetX: startPos.x,
@@ -497,6 +549,8 @@
       x: player.x || 0,
       y: player.y || 0,
       characterId: player.characterId || 0,
+      appearance: player.appearance || null,
+      color: player.appearance ? player.appearance.outfitColor : null,
       drinkState: player.drinkState || 'none',
       drinkColor: player.drinkColor || null
     });
@@ -552,6 +606,9 @@
 
   initCrowd();
 
+  // Initialize player appearance from localStorage
+  localPlayer.appearance = loadPlayerAppearance();
+
   window.Game = {
     CONSTANTS: CONSTANTS,
     localPlayer: localPlayer,
@@ -579,6 +636,11 @@
     updateRemotePlayerDrink: updateRemotePlayerDrink,
     updateGroundDrinkVelocity: updateGroundDrinkVelocity,
     setRoomPlayers: setRoomPlayers,
-    replaceGroundDrinks: replaceGroundDrinks
+    replaceGroundDrinks: replaceGroundDrinks,
+    SKIN_TONES: SKIN_TONES,
+    HAIR_STYLES: HAIR_STYLES,
+    HAIR_COLORS: HAIR_COLORS,
+    ACCESSORIES: ACCESSORIES,
+    savePlayerAppearance: savePlayerAppearance
   };
 })();

@@ -35,6 +35,33 @@
   <!-- Modal container -->
   <div id="modalContainer" class="modal-container" style="display:none"></div>
 
+  <!-- Character customization -->
+  <button id="customizeBtn" class="customize-btn" title="Customize Character" style="display:none">&#9998;</button>
+  <div id="customizePanel" class="customize-panel" style="display:none">
+    <h3>Character</h3>
+    <div class="customize-preview"><canvas id="previewCanvas" width="60" height="80"></canvas></div>
+    <div class="customize-section">
+      <label>Skin Tone</label>
+      <div id="skinSwatches" class="swatch-row"></div>
+    </div>
+    <div class="customize-section">
+      <label>Outfit Color</label>
+      <div id="outfitSwatches" class="swatch-row"></div>
+    </div>
+    <div class="customize-section">
+      <label>Hair Style</label>
+      <div id="hairStyleBtns" class="style-row"></div>
+    </div>
+    <div class="customize-section">
+      <label>Hair Color</label>
+      <div id="hairColorSwatches" class="swatch-row"></div>
+    </div>
+    <div class="customize-section">
+      <label>Accessory</label>
+      <div id="accessoryBtns" class="style-row"></div>
+    </div>
+  </div>
+
   <!-- Minimap -->
   <div id="minimap">
     <div id="minimapLabel" class="minimap-label">Main Club</div>
@@ -87,6 +114,7 @@
   <script src="js/network.js"></script>
   <script src="js/interaction.js"></script>
   <script src="js/renderer.js"></script>
+  <script src="js/customize.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>
