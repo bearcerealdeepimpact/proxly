@@ -130,6 +130,7 @@ wss.on('connection', (ws) => {
           x: 400,
           y: 520,
           characterId: msg.characterId || 0,
+          appearance: msg.appearance || null,
           drinkState: 'none',
           drinkColor: null,
           room: 'main',
