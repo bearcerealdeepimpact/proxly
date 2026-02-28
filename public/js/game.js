@@ -168,10 +168,10 @@
 
   function isNearBar() {
     if (currentRoom !== 'main') return false;
-    var barCX = 30 + 200 / 2;
-    var barFrontY = 420 + 30;
-    var dx = localPlayer.x - barCX;
-    var dy = localPlayer.y - barFrontY;
+    var barFrontX = 30 + 30; // right edge of vertical bar
+    var barCY = 200 + 200 / 2; // vertical center
+    var dx = localPlayer.x - barFrontX;
+    var dy = localPlayer.y - barCY;
     return Math.sqrt(dx * dx + dy * dy) < CONSTANTS.BAR_INTERACT_DIST;
   }
 
@@ -339,7 +339,7 @@
   }
 
   function pickBarTarget() {
-    return { x: randomInRange(80, 220), y: randomInRange(500, 520) };
+    return { x: randomInRange(70, 90), y: randomInRange(220, 380) };
   }
 
   function pickGroupDanceTarget(groupIndex) {
