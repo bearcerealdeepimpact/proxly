@@ -151,9 +151,9 @@
     DANCE_FLOOR_W: 600,
     DANCE_FLOOR_H: 350,
     BAR_X: 30,
-    BAR_Y: 420,
-    BAR_W: 200,
-    BAR_H: 30,
+    BAR_Y: 200,
+    BAR_W: 30,
+    BAR_H: 200,
     BAR_ELEVATION: 18,
     TABLE_RADIUS: 10,
     TABLE_ELEVATION: 20,
@@ -1749,11 +1749,11 @@
 
   function drawBottlesOnBar(barX, barY, barW, barH, elevation) {
     var bottleColors = ['#228822', '#cc8800', '#882222', '#2255aa'];
-    var spacing = barW / (bottleColors.length + 1);
+    var spacing = barH / (bottleColors.length + 1);
 
     for (var i = 0; i < bottleColors.length; i++) {
-      var bx = barX + spacing * (i + 1);
-      var by = barY + barH * 0.4;
+      var bx = barX + barW * 0.4;
+      var by = barY + spacing * (i + 1);
       var screen = worldToScreen(bx, by);
       var sy = screen.y - elevation * HEIGHT_SCALE;
       var s = TILE_SCALE;
@@ -1817,12 +1817,53 @@
     // Bottles on top
     drawBottlesOnBar(L.BAR_X, L.BAR_Y, L.BAR_W, L.BAR_H, L.BAR_ELEVATION);
 
-    // 3 bar stools in front
-    var stoolY = L.BAR_Y + L.BAR_H + 20;
-    var stoolSpacing = L.BAR_W / 4;
+    // 3 bar stools to the right of the vertical bar
+    var stoolX = L.BAR_X + L.BAR_W + 20;
+    var stoolSpacing = L.BAR_H / 4;
     for (var j = 0; j < 3; j++) {
-      drawBarStool(L.BAR_X + stoolSpacing * (j + 1), stoolY);
+      drawBarStool(stoolX, L.BAR_Y + stoolSpacing * (j + 1));
     }
+
+    // Neon BAR sign
+    drawBarSign();
+  }
+
+  function drawBarSign() {
+    var L = LAYOUT;
+    var signX = L.BAR_X + L.BAR_W / 2;
+    var signY = L.BAR_Y - 8;
+    var screen = worldToScreen(signX, signY);
+    var sy = screen.y - (L.BAR_ELEVATION + 6) * HEIGHT_SCALE;
+
+    var t = animTime / 1000;
+    var pulseAlpha = 0.85 + 0.15 * Math.sin(t * 2.5);
+
+    // Glitch flicker
+    var glitchCycle = t % 2.0;
+    var glitchAlpha = 1.0;
+    if (glitchCycle > 1.85) {
+      var gPhase = (glitchCycle - 1.85) / 0.15;
+      glitchAlpha = Math.sin(gPhase * Math.PI * 6) > 0 ? 1.0 : 0.15;
+    }
+
+    ctx.save();
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center';
+
+    // Outer glow pass
+    ctx.globalAlpha = pulseAlpha * 0.3 * glitchAlpha;
+    ctx.shadowColor = '#ffaa22';
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = '#ffaa22';
+    ctx.fillText('BAR', screen.x, sy);
+
+    // Inner bright pass
+    ctx.globalAlpha = pulseAlpha * glitchAlpha;
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = '#ffdd66';
+    ctx.fillText('BAR', screen.x, sy);
+
+    ctx.restore();
   }
 
   // ─── Table drawing (standing/cocktail, no chairs) ──────────────────────
@@ -3135,11 +3176,11 @@
         data: null
       });
 
-      // Bartender NPCs (behind the bar)
-      var bt1x = L.BAR_X + L.BAR_W * 0.33;
-      var bt1y = L.BAR_Y - 15;
-      var bt2x = L.BAR_X + L.BAR_W * 0.67;
-      var bt2y = L.BAR_Y - 15;
+      // Bartender NPCs (behind the bar, between wall and bar)
+      var bt1x = L.BAR_X - 15;
+      var bt1y = L.BAR_Y + L.BAR_H * 0.33;
+      var bt2x = L.BAR_X - 15;
+      var bt2y = L.BAR_Y + L.BAR_H * 0.67;
       drawables.push({
         type: 'bartender',
         sortKey: bt1x + bt1y,
