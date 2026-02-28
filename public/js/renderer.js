@@ -127,7 +127,7 @@
   };
 
   var DJ_X = 350;
-  var DJ_Y = 35;
+  var DJ_Y = 21;
 
   var LAYOUT = {
     WALL_THICKNESS: 10,
@@ -1003,12 +1003,26 @@
   function drawDJBooth() {
     var L = LAYOUT;
 
-    // Booth platform (gradient block)
+    // Booth platform only (gradient block)
     drawRaisedBlockGradient(
       L.DJ_BOOTH_X, L.DJ_BOOTH_Y, L.DJ_BOOTH_W, L.DJ_BOOTH_H,
       L.DJ_BOOTH_ELEVATION,
       COLORS.DJ_BOOTH_TOP, COLORS.DJ_BOOTH_FRONT, COLORS.DJ_BOOTH_SIDE
     );
+
+    // LED strip along front edge of booth
+    drawLEDStrip(L.DJ_BOOTH_X, L.DJ_BOOTH_Y + L.DJ_BOOTH_H, L.DJ_BOOTH_W, L.DJ_BOOTH_ELEVATION);
+
+    // Warm amber spotlight on DJ area
+    drawSpotlight(
+      L.DJ_BOOTH_X + L.DJ_BOOTH_W / 2, L.DJ_BOOTH_Y + L.DJ_BOOTH_H / 2,
+      'rgba(255,180,80,0.2)', 80, L.DJ_BOOTH_ELEVATION
+    );
+  }
+
+  // DJ Desk + equipment — drawn as a depth-sorted drawable so it overlaps DJs standing behind it
+  function drawDJDeskAndEquipment() {
+    var L = LAYOUT;
 
     // DJ Desk block on top of booth
     var deskTotalElev = L.DJ_BOOTH_ELEVATION + L.DJ_DESK_ELEVATION;
@@ -1037,15 +1051,6 @@
     ctx.beginPath();
     ctx.arc(laptopCenter.x, laptopSy, 8 * TILE_SCALE, 0, Math.PI * 2);
     ctx.fill();
-
-    // LED strip along front edge of booth
-    drawLEDStrip(L.DJ_BOOTH_X, L.DJ_BOOTH_Y + L.DJ_BOOTH_H, L.DJ_BOOTH_W, L.DJ_BOOTH_ELEVATION);
-
-    // Warm amber spotlight on DJ area
-    drawSpotlight(
-      L.DJ_BOOTH_X + L.DJ_BOOTH_W / 2, L.DJ_BOOTH_Y + L.DJ_BOOTH_H / 2,
-      'rgba(255,180,80,0.2)', 80, L.DJ_BOOTH_ELEVATION
-    );
   }
 
   // ─── PA System (Line Arrays + Subwoofers) ──────────────────────────────
@@ -1990,8 +1995,8 @@
 
   // Positions for the duo: Revilo (left CDJ) and Longfield (right CDJ)
   var DJ_DUO = [
-    { wx: 325, wy: 38, color: '#ddddcc', phaseOff: 0 },
-    { wx: 375, wy: 32, color: '#ccccbb', phaseOff: 0.7 }
+    { wx: 325, wy: 20, color: '#ddddcc', phaseOff: 0 },
+    { wx: 375, wy: 22, color: '#ccccbb', phaseOff: 0.7 }
   ];
 
   function drawSingleDJFigure(wx, wy, color, phaseOff) {
@@ -3169,10 +3174,17 @@
         data: null
       });
 
-      // DJ duo
+      // DJ duo (behind the desk)
       drawables.push({
         type: 'dj',
         sortKey: DJ_X + DJ_Y,
+        data: null
+      });
+
+      // DJ desk + equipment (in front of DJs, sorted by desk center)
+      drawables.push({
+        type: 'djDesk',
+        sortKey: L.DJ_DESK_X + L.DJ_DESK_W / 2 + L.DJ_DESK_Y + L.DJ_DESK_H / 2,
         data: null
       });
 
@@ -3675,6 +3687,8 @@
         drawBar();
       } else if (d.type === 'dj') {
         drawDJ();
+      } else if (d.type === 'djDesk') {
+        drawDJDeskAndEquipment();
       } else if (d.type === 'bartender') {
         drawBartender(d.data.x, d.data.y);
       } else if (d.type === 'groundDrink') {
